@@ -17,3 +17,18 @@ def build_model():
     )
 
     return model
+def train_neural_model(data):
+
+    data["Return"] = data["Close"].pct_change()
+    data["Direction"] = (data["Return"] > 0).astype(int)
+
+    data = data.dropna()
+
+    X = data[["EMA9","EMA21","Volume"]].values
+    y = data["Direction"].values
+
+    model = build_model()
+
+    model.fit(X, y, epochs=10, batch_size=16, verbose=0)
+
+    return model
