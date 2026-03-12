@@ -23,11 +23,11 @@ try:
 
     signal = "Bullish" if prediction[0] == 1 else "Bearish"
 
-    st.metric("AI Market Prediction", signal)
-    st.metric("Bullish Probability", str(bull_prob)+"%")
-    st.metric("Bearish Probability", str(bear_prob)+"%")
+    st.metric("AI Prediction", signal)
+    st.metric("Bullish %", bull_prob)
+    st.metric("Bearish %", bear_prob)
 
 except Exception as e:
 
-    st.error("AI Model Temporary Error")
+    st.error("Model loading issue")
     st.write(e)
