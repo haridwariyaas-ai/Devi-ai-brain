@@ -1,18 +1,17 @@
 import streamlit as st
-from ai_engine import train_model,predict_signal
+
+import ai_engine
 
 st.title("DEVI AI Trading Brain")
 
-model,data=train_model()
+model,data = ai_engine.train_model()
 
-signal,bull,bear,latest=predict_signal(model,data)
+signal,bull,bear,price = ai_engine.predict_signal(model,data)
 
-st.metric("NIFTY Price",round(latest["Close"],2))
+st.metric("NIFTY Price", round(price,2))
 
-st.metric("AI Signal",signal)
+st.metric("AI Signal", signal)
 
-st.metric("Bullish %",bull)
+st.metric("Bullish %", bull)
 
-st.metric("Bearish %",bear)
-
-st.metric("RSI",round(latest["RSI"],2))
+st.metric("Bearish %", bear)
