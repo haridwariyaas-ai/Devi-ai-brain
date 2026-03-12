@@ -44,6 +44,16 @@ def predict_signal(model, data):
 
     signal = "Bullish" if prediction[0] == 1 else "Bearish"
 
+    return signal, bull, bear, latest["Close"]
+    prediction = model.predict(features)
+
+    prob = model.predict_proba(features)
+
+    bull = round(prob[0][1] * 100, 2)
+    bear = round(prob[0][0] * 100, 2)
+
+    signal = "Bullish" if prediction[0] == 1 else "Bearish"
+
     return signal, bull, bear, latest["Close"]    ]]
 
     prediction=model.predict(features)
