@@ -1,27 +1,33 @@
 import streamlit as st
-import yfinance as yf
 from ai_model import train_model
 
 st.title("DEVI AI Brain")
 
-# auto learning training
-model, data = train_model()
+try:
 
-# latest data
-latest = data.iloc[-1]
+    model, data = train_model()
 
-features = [[float(latest["EMA9"]), float(latest["EMA21"]), float(latest["Volume"])]]
+    latest = data.iloc[-1]
 
-prediction = model.predict(features)
-prob = model.predict_proba(features)
+    ema9 = float(latest["EMA9"])
+    ema21 = float(latest["EMA21"])
+    volume = float(latest["Volume"])
 
-bull_prob = round(prob[0][1] * 100,2)
-bear_prob = round(prob[0][0] * 100,2)
+    features = [[ema9, ema21, volume]]
 
-signal = "Bullish" if prediction[0] == 1 else "Bearish"
+    prediction = model.predict(features)
+    prob = model.predict_proba(features)
 
-st.metric("AI Market Prediction", signal)
-st.metric("Bullish Probability", str(bull_prob)+"%")
-st.metric("Bearish Probability", str(bear_prob)+"%")
+    bull_prob = round(prob[0][1]*100,2)
+    bear_prob = round(prob[0][0]*100,2)
 
-st.write("Last learning data size:", len(data))
+    signal = "Bullish" if prediction[0] == 1 else "Bearish"
+
+    st.metric("AI Market Prediction", signal)
+    st.metric("Bullish Probability", str(bull_prob)+"%")
+    st.metric("Bearish Probability", str(bear_prob)+"%")
+
+except Exception as e:
+
+    st.error("AI Model Temporary Error")
+    st.write(e)
