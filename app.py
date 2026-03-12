@@ -6,7 +6,7 @@ st.title("DEVI AI Brain")
 
 model = train_model()
 
-data = yf.download("^NSEI", period="120d")
+data = yf.download("^NSEI", period="120d", interval="1d")
 
 data["EMA9"] = data["Close"].ewm(span=9).mean()
 data["EMA21"] = data["Close"].ewm(span=21).mean()
@@ -15,7 +15,7 @@ data = data.dropna()
 
 latest = data.iloc[-1]
 
-features = [[latest["EMA9"], latest["EMA21"], latest["Volume"]]]
+features = [[float(latest["EMA9"]), float(latest["EMA21"]), float(latest["Volume"])]]
 
 prediction = model.predict(features)
 
