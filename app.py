@@ -1,33 +1,18 @@
 import streamlit as st
-from ai_model import train_model
+from data_engine.market_data import get_market_data
+from ai_brain.model import train_model
+from decision_engine.signal import generate_signal
 
-st.title("DEVI AI Brain")
+st.title("DEVI JARVIS AI")
 
-try:
+data = get_market_data()
 
-    model, data = train_model()
+model = train_model(data)
 
-    latest = data.iloc[-1]
+latest = data.iloc[-1]
 
-    ema9 = float(latest["EMA9"])
-    ema21 = float(latest["EMA21"])
-    volume = float(latest["Volume"])
+signal, bull, bear = generate_signal(model, latest)
 
-    features = [[ema9, ema21, volume]]
-
-    prediction = model.predict(features)
-    prob = model.predict_proba(features)
-
-    bull_prob = round(prob[0][1]*100,2)
-    bear_prob = round(prob[0][0]*100,2)
-
-    signal = "Bullish" if prediction[0] == 1 else "Bearish"
-
-    st.metric("AI Prediction", signal)
-    st.metric("Bullish %", bull_prob)
-    st.metric("Bearish %", bear_prob)
-
-except Exception as e:
-
-    st.error("Model loading issue")
-    st.write(e)
+st.metric("AI Signal", signal)
+st.metric("Bullish %", bull)
+st.metric("Bearish %", bear)
