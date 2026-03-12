@@ -6,17 +6,19 @@ st.title("DEVI AI Brain")
 
 model = train_model()
 
-data = yf.download("^NSEI", period="5d", interval="1d")
+data = yf.download("^NSEI", period="120d")
+
+data["EMA9"] = data["Close"].ewm(span=9).mean()
+data["EMA21"] = data["Close"].ewm(span=21).mean()
+
+data = data.dropna()
 
 latest = data.iloc[-1]
 
-features = [[latest["Close"], latest["Close"], latest["Volume"]]]
+features = [[latest["EMA9"], latest["EMA21"], latest["Volume"]]]
 
 prediction = model.predict(features)
 
-if prediction == 1:
-    signal = "Bullish"
-else:
-    signal = "Bearish"
+signal = "Bullish" if prediction[0] == 1 else "Bearish"
 
 st.metric("AI Market Prediction", signal)
