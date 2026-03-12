@@ -4,8 +4,10 @@ from sklearn.ensemble import RandomForestClassifier
 
 def train_model():
 
-    data = yf.download("^NSEI", period="1y", interval="1d")
+    # download latest market data
+    data = yf.download("^NSEI", period="2y", interval="1d")
 
+    # features
     data["EMA9"] = data["Close"].ewm(span=9).mean()
     data["EMA21"] = data["Close"].ewm(span=21).mean()
 
@@ -17,8 +19,8 @@ def train_model():
     X = data[["EMA9","EMA21","Volume"]]
     y = data["Direction"]
 
-    model = RandomForestClassifier()
+    model = RandomForestClassifier(n_estimators=200)
 
     model.fit(X,y)
 
-    return model
+    return model, data
