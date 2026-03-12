@@ -1,15 +1,21 @@
 import streamlit as st
-import random
+import yfinance as yf
 
 st.title("DEVI AI Brain")
 
-price = random.randint(22000,23000)
+# NIFTY data
+data = yf.Ticker("^NSEI")
 
-st.metric("NIFTY Price", price)
+df = data.history(period="1d")
 
-prediction = random.choice(["Bullish","Bearish"])
+price = df["Close"].iloc[-1]
 
-confidence = random.randint(60,80)
+st.metric("NIFTY Price", round(price,2))
+
+# simple AI logic
+if df["Close"].iloc[-1] > df["Open"].iloc[-1]:
+    prediction = "Bullish"
+else:
+    prediction = "Bearish"
 
 st.metric("AI Prediction", prediction)
-st.metric("Confidence", str(confidence)+"%")
