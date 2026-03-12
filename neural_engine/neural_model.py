@@ -1,4 +1,4 @@
-import tensorflow as tf
+import numpy as np
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense
 
@@ -17,6 +17,8 @@ def build_model():
     )
 
     return model
+
+
 def train_neural_model(data):
 
     data["Return"] = data["Close"].pct_change()
@@ -29,8 +31,9 @@ def train_neural_model(data):
 
     model = build_model()
 
-    model.fit(X, y, epochs=10, batch_size=16, verbose=0)
+    model.fit(X, y, epochs=5, batch_size=16, verbose=0)
 
+    return model
     return model
 import numpy as np
 
