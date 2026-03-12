@@ -32,3 +32,21 @@ def train_neural_model(data):
     model.fit(X, y, epochs=10, batch_size=16, verbose=0)
 
     return model
+import numpy as np
+
+def neural_predict(model, latest):
+
+    features = np.array([[
+        float(latest["EMA9"]),
+        float(latest["EMA21"]),
+        float(latest["Volume"])
+    ]])
+
+    prob = model.predict(features)
+
+    bull = round(prob[0][1]*100,2)
+    bear = round(prob[0][0]*100,2)
+
+    signal = "Bullish" if bull > bear else "Bearish"
+
+    return signal, bull, bear
