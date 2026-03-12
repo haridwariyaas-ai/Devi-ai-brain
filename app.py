@@ -1,21 +1,22 @@
 import streamlit as st
 import yfinance as yf
+from ai_model import train_model
 
 st.title("DEVI AI Brain")
 
-# NIFTY data
-data = yf.Ticker("^NSEI")
+model = train_model()
 
-df = data.history(period="1d")
+data = yf.download("^NSEI", period="5d", interval="1d")
 
-price = df["Close"].iloc[-1]
+latest = data.iloc[-1]
 
-st.metric("NIFTY Price", round(price,2))
+features = [[latest["Close"], latest["Close"], latest["Volume"]]]
 
-# simple AI logic
-if df["Close"].iloc[-1] > df["Open"].iloc[-1]:
-    prediction = "Bullish"
+prediction = model.predict(features)
+
+if prediction == 1:
+    signal = "Bullish"
 else:
-    prediction = "Bearish"
+    signal = "Bearish"
 
-st.metric("AI Prediction", prediction)
+st.metric("AI Market Prediction", signal)
