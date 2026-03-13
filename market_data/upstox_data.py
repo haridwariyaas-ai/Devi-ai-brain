@@ -6,8 +6,8 @@ def get_nifty_price():
 
     ACCESS_TOKEN = os.getenv("UPSTOX_ACCESS_TOKEN")
 
-    if ACCESS_TOKEN is None:
-        print("Access token not set")
+    if not ACCESS_TOKEN:
+        print("Token missing")
         return None
 
     url = "https://api.upstox.com/v2/market-quote/ltp"
@@ -23,18 +23,27 @@ def get_nifty_price():
 
     try:
 
-        response = requests.get(url, headers=headers, params=params)
+        r = requests.get(url, headers=headers, params=params)
 
-        data = response.json()
+        data = r.json()
 
-        # debugging print
         print("API Response:", data)
 
-        if "data" in data:
+        if "data" in data and "NSE_INDEX|Nifty 50" in data["data"]:
 
-            instrument = "NSE_INDEX|Nifty 50"
+            return data["data"]["NSE_INDEX|Nifty 50"]["last_price"]
 
-            if instrument in data["data"]:
+        else:
+
+            print("Price not found")
+
+            return None
+
+    except Exception as e:
+
+        print("API Error:", e)
+
+        return None            if instrument in data["data"]:
 
                 return data["data"][instrument]["last_price"]
 
