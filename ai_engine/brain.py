@@ -1,7 +1,7 @@
-from market_data.upstox_data import get_nifty_price
-from utils.atm import find_atm
-from ai_engine.decision import market_bias
-from ai_engine.strategy import build_strategy
+from ..market_data.upstox_data import get_nifty_price
+from ..utils.atm import find_atm
+from .decision import market_bias
+from .strategy import build_strategy
 
 
 class DeviBrain:
