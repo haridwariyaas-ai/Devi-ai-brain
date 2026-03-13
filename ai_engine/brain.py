@@ -1,32 +1,40 @@
+from market.nifty_data import get_nifty_price
+from market.option_chain import get_option_chain
+from utils.atm import find_atm
+from ai_engine.decision import market_bias
+from ai_engine.strategy import build_strategy
+from utils.risk import position_size
+from ai_engine.learning import LearningBrain
 
-from market_data.nifty_price import get_nifty_price
-from market_data.option_chain import get_option_chain
-from utils.atm_selector import find_atm
-from ai_engine.decision_engine import make_decision
-from ai_engine.strategy_engine import build_trade
-from ai_engine.learning_brain import LearningBrain
 
 class DeviBrain:
 
     def __init__(self):
+
         self.memory = LearningBrain()
 
     def run_cycle(self):
 
         price = get_nifty_price()
-        chain = get_option_chain()
 
-        atm = find_atm(price, chain)
+        option_chain = get_option_chain()
 
-        decision = make_decision(chain)
+        atm = find_atm(price)
 
-        trade = build_trade(decision, atm)
+        bias = market_bias(option_chain["PCR"])
+
+        strategy = build_strategy(bias, atm)
+
+        size = position_size(100000, 2)
+
+        trade = {
+            "price": price,
+            "atm": atm,
+            "bias": bias,
+            "strategy": strategy,
+            "size": size
+        }
 
         self.memory.store(trade)
 
-        return {
-            "nifty_price": price,
-            "atm_strike": atm,
-            "decision": decision,
-            "trade_plan": trade
-        }
+        return trade
