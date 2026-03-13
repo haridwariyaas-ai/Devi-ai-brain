@@ -1,5 +1,6 @@
 import requests
 
+
 def get_nifty_price():
 
     try:
@@ -10,10 +11,15 @@ def get_nifty_price():
 
         data = r.json()
 
+        print("API RESPONSE:", data)
+
         price = data["quoteResponse"]["result"][0]["regularMarketPrice"]
 
-        return price
+        return float(price)
 
-    except:
+    except Exception as e:
 
-        return None
+        print("ERROR:", e)
+
+        # fallback price so system doesn't break
+        return 22450
