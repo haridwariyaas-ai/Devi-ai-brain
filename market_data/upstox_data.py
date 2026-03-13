@@ -22,7 +22,7 @@ def get_nifty_price():
     r = requests.get(url, headers=headers, params=params)
 
     data = r.json()
-
+print("API RESPONSE:", data)
     if "data" in data and "NSE_INDEX|Nifty 50" in data["data"]:
         return data["data"]["NSE_INDEX|Nifty 50"]["last_price"]
 
