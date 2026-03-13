@@ -1,8 +1,7 @@
-
-from market_data.upstox_data import get_nifty_price
+from market_data.price_data import get_nifty_price
 from utils.atm import find_atm
-from ai_engine.decision import market_bias
-from ai_engine.strategy import build_strategy
+from analysis.oi_analysis import detect_bias
+from ai_engine.strategy_generator import generate_strategy
 
 class DeviBrain:
 
@@ -12,13 +11,18 @@ class DeviBrain:
 
         atm = find_atm(price)
 
-        bias = market_bias()
+        call_oi = 120000
+        put_oi = 180000
 
-        strategy = build_strategy(atm)
+        bias = detect_bias(call_oi, put_oi)
+
+        strategy = generate_strategy(bias)
 
         return {
+
             "NIFTY_PRICE": price,
             "ATM_STRIKE": atm,
             "MARKET_BIAS": bias,
-            "TRADE_IDEA": strategy
+            "AI_STRATEGY": strategy
+
         }
