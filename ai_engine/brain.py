@@ -69,40 +69,4 @@ class DeviBrain:
 
         }
 
-        return result        # 6️⃣ Generate Strategy
-        strategy = generate_strategy(bias, pcr)
-
-        # 7️⃣ Support / Resistance
-        support, resistance = calculate_support_resistance(price)
-
-        # 8️⃣ Candlestick Pattern
-        candle = detect_candle()
-
-        # 9️⃣ Probability Engine
-        probability = calculate_probability(bias, pcr)
-
-        # 🔟 Final Output
-        result = {
-
-            "NIFTY_PRICE": price,
-            "ATM_STRIKE": atm,
-
-            "CALL_OI": call_oi,
-            "PUT_OI": put_oi,
-
-            "PCR": pcr,
-            "MARKET_BIAS": bias,
-
-            "AI_STRATEGY": strategy,
-
-            "SUPPORT": support,
-            "RESISTANCE": resistance,
-
-            "CANDLE_PATTERN": candle,
-
-            "PROBABILITY": probability
-
-    
-
-        return result"PROBABILITY": probability,
-        }
+        return result
