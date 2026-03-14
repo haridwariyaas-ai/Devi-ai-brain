@@ -67,7 +67,7 @@ class DeviBrain:
 
             "PROBABILITY": probability
 
-        }
+    
 
         return result"PROBABILITY": probability,
         }
