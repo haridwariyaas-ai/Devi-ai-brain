@@ -1,11 +1,17 @@
-def generate_strategy(bias):
+def generate_strategy(bias, pcr):
 
     if bias == "Bullish":
 
-        return "Sell PUT or Bull Put Spread"
+        if pcr > 1.2:
+            return "Sell PUT"
+
+        return "Bull Put Spread"
 
     if bias == "Bearish":
 
-        return "Sell CALL or Bear Call Spread"
+        if pcr < 0.8:
+            return "Sell CALL"
+
+        return "Bear Call Spread"
 
     return "Iron Condor"
