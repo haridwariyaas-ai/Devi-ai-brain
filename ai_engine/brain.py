@@ -19,6 +19,11 @@ class DeviBrain:
         bias = detect_bias(call_oi, put_oi)
 
         strategy = generate_strategy(bias)
+       support, resistance = calculate_support_resistance(price)
+
+candle = detect_candle()
+
+probability = calculate_probability(bias, pcr) 
 
         return {
 
@@ -26,5 +31,8 @@ class DeviBrain:
             "ATM_STRIKE": atm,
             "MARKET_BIAS": bias,
             "AI_STRATEGY": strategy
-
+"SUPPORT": support,
+"RESISTANCE": resistance,
+"CANDLE_PATTERN": candle,
+"PROBABILITY": probability,
         }
