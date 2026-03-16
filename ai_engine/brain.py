@@ -1,5 +1,6 @@
 from market_data.price_data import get_nifty_price
 from market_data.option_chain import get_option_chain
+from market_data.upstox_option_chain import get_upstox_option_chain
 
 from utils.atm import find_atm
 
@@ -11,23 +12,25 @@ from analysis.probability_engine import calculate_probability
 from analysis.trend_detection import detect_trend
 from analysis.volume_analysis import analyze_volume
 from analysis.risk_manager import risk_manager
+from analysis.oi_heatmap import oi_heatmap
 
 from ai_engine.strategy_generator import generate_strategy
 from ai_engine.memory import save_memory
 from ai_engine.decision_engine import final_decision
+from ai_engine.ml_model import predict_market
 
 
 class DeviBrain:
 
     def run_cycle(self):
 
-        # 1️⃣ Price
+        # 1️⃣ Get Nifty Price
         price = get_nifty_price()
 
-        # 2️⃣ ATM
+        # 2️⃣ Find ATM
         atm = find_atm(price)
 
-        # 3️⃣ Option Chain
+        # 3️⃣ Basic Option Chain
         option_chain = get_option_chain()
 
         call_oi = option_chain["call_oi"]
@@ -36,10 +39,10 @@ class DeviBrain:
         # 4️⃣ PCR
         pcr = calculate_pcr(call_oi, put_oi)
 
-        # 5️⃣ Bias
+        # 5️⃣ Market Bias
         bias = detect_bias(call_oi, put_oi)
 
-        # 6️⃣ Strategy
+        # 6️⃣ Strategy Generator
         strategy = generate_strategy(bias, pcr)
 
         # 7️⃣ Support Resistance
@@ -48,7 +51,7 @@ class DeviBrain:
         # 8️⃣ Candle Pattern
         candle = detect_candle()
 
-        # 9️⃣ Probability
+        # 9️⃣ Probability Engine
         probability = calculate_probability(bias, pcr)
 
         # 🔟 Trend Detection
@@ -60,10 +63,18 @@ class DeviBrain:
         # 12️⃣ Risk Manager
         risk = risk_manager(probability, trend)
 
-        # 13️⃣ Final AI Decision
+        # 13️⃣ Final Decision
         decision = final_decision(strategy, probability, risk)
 
-        # 14️⃣ Memory Save
+        # 14️⃣ Live Option Chain (Upstox ready)
+        live_chain = get_upstox_option_chain()
+
+        heatmap_support, heatmap_resistance = oi_heatmap(live_chain)
+
+        # 15️⃣ ML Prediction
+        ml_prediction = predict_market()
+
+        # 16️⃣ Memory Save
         memory_data = {
 
             "price": price,
@@ -75,7 +86,7 @@ class DeviBrain:
 
         save_memory(memory_data)
 
-        # 15️⃣ Final Output
+        # 17️⃣ Final Output
         result = {
 
             "NIFTY_PRICE": price,
@@ -103,7 +114,13 @@ class DeviBrain:
 
             "RISK_LEVEL": risk,
 
-            "AI_DECISION": decision
+            "AI_DECISION": decision,
+
+            "HEATMAP_SUPPORT": heatmap_support,
+            "HEATMAP_RESISTANCE": heatmap_resistance,
+
+            "ML_DIRECTION": ml_prediction["direction"],
+            "ML_CONFIDENCE": ml_prediction["confidence"]
 
         }
 
