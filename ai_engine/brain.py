@@ -10,9 +10,11 @@ from analysis.candlestick_ai import detect_candle
 from analysis.probability_engine import calculate_probability
 from analysis.trend_detection import detect_trend
 from analysis.volume_analysis import analyze_volume
+from analysis.risk_manager import risk_manager
 
 from ai_engine.strategy_generator import generate_strategy
 from ai_engine.memory import save_memory
+from ai_engine.decision_engine import final_decision
 
 
 class DeviBrain:
@@ -55,7 +57,13 @@ class DeviBrain:
         # 11️⃣ Volume Analysis
         volume, volume_strength = analyze_volume()
 
-        # 12️⃣ Memory Save
+        # 12️⃣ Risk Manager
+        risk = risk_manager(probability, trend)
+
+        # 13️⃣ Final AI Decision
+        decision = final_decision(strategy, probability, risk)
+
+        # 14️⃣ Memory Save
         memory_data = {
 
             "price": price,
@@ -67,7 +75,7 @@ class DeviBrain:
 
         save_memory(memory_data)
 
-        # 13️⃣ Final Output
+        # 15️⃣ Final Output
         result = {
 
             "NIFTY_PRICE": price,
@@ -91,7 +99,11 @@ class DeviBrain:
             "TREND": trend,
 
             "VOLUME": volume,
-            "VOLUME_STRENGTH": volume_strength
+            "VOLUME_STRENGTH": volume_strength,
+
+            "RISK_LEVEL": risk,
+
+            "AI_DECISION": decision
 
         }
 
