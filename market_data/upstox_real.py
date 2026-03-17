@@ -8,7 +8,7 @@ def get_upstox_price():
     print("🔑 TOKEN:", token)
 
     if not token:
-        print("❌ Token missing")
+        print("❌ TOKEN NOT FOUND")
         return None
 
     url = "https://api.upstox.com/v2/market-quote/ltp"
@@ -18,37 +18,31 @@ def get_upstox_price():
         "Accept": "application/json"
     }
 
-    # ✅ Try both instruments (fallback logic)
-    instruments = [
-        "NSE_INDEX|Nifty 50",
-        "NSE_INDEX|Nifty Bank"
-    ]
+    params = {
+        "instrument_key": "NSE_INDEX|Nifty 50"
+    }
 
-    for instrument in instruments:
+    try:
+        response = requests.get(url, headers=headers, params=params)
 
-        params = {
-            "instrument_key": instrument
-        }
+        print("📡 STATUS:", response.status_code)
+        print("📡 RAW TEXT:", response.text)
 
-        try:
-            response = requests.get(url, headers=headers, params=params)
+        data = response.json()
 
-            print("📡 STATUS CODE:", response.status_code)
+        print("📊 JSON:", data)
 
-            data = response.json()
+        if "data" in data and "NSE_INDEX|Nifty 50" in data["data"]:
+            price = data["data"]["NSE_INDEX|Nifty 50"]["last_price"]
 
-            print(f"📊 RESPONSE for {instrument}:", data)
+            print("✅ REAL PRICE:", price)
 
-            if "data" in data and instrument in data["data"]:
-                price = data["data"][instrument]["last_price"]
+            return price
 
-                print(f"✅ PRICE FOUND ({instrument}):", price)
+        else:
+            print("❌ DATA FORMAT ISSUE")
 
-                return price
-
-        except Exception as e:
-            print("❌ ERROR:", e)
-
-    print("⚠️ No valid data from Upstox")
+    except Exception as e:
+        print("❌ ERROR:", e)
 
     return None
