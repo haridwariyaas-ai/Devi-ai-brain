@@ -1,5 +1,6 @@
 from market_data.price_data import get_nifty_price
-from market_data.upstox_real import get_upstox_price  # ✅ IMPORTANT
+from market_data.upstox_real import get_upstox_price
+from market_data.csv_price import get_csv_price  # ✅ NEW
 
 from market_data.option_chain import get_option_chain
 from market_data.upstox_option_chain import get_upstox_option_chain
@@ -34,11 +35,15 @@ class DeviBrain:
 
     def run_cycle(self):
 
-        # 🔥 STEP 1 — REAL PRICE (Upstox)
+        # 🔥 STEP 1 — PRICE LOGIC (FINAL FIX)
         price = get_upstox_price()
 
         if price is None:
-            print("⚠️ Upstox failed, using fallback price")
+            print("⚠️ Using CSV fallback")
+            price = get_csv_price()
+
+        if price is None:
+            print("⚠️ Using default fallback")
             price = get_nifty_price()
 
         print("🔥 FINAL PRICE USED:", price)
