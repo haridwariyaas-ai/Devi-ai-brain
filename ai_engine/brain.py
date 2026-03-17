@@ -1,8 +1,8 @@
 from market_data.price_data import get_nifty_price
+from market_data.upstox_real import get_upstox_price  # ✅ IMPORTANT
+
 from market_data.option_chain import get_option_chain
 from market_data.upstox_option_chain import get_upstox_option_chain
-from market_data.upstox_live import get_upstox_live_chain
-from market_data.upstox_real import get_upstox_price  # ✅ NEW
 
 from utils.atm import find_atm
 
@@ -23,12 +23,10 @@ from ai_engine.memory import save_memory
 from ai_engine.decision_engine import final_decision
 from ai_engine.ml_model import predict_market
 
-# V11 Learning
 from ai_engine.training_data import load_data
 from ai_engine.learning_engine import evaluate_trade
 from ai_engine.accuracy_tracker import update_accuracy
 
-# ML Training
 from ai_engine.ml_trainer import train_model, predict_trend
 
 
@@ -36,18 +34,20 @@ class DeviBrain:
 
     def run_cycle(self):
 
-        # 🔥 V12 REAL PRICE (Upstox + fallback)
+        # 🔥 STEP 1 — REAL PRICE (Upstox)
         price = get_upstox_price()
 
         if price is None:
+            print("⚠️ Upstox failed, using fallback price")
             price = get_nifty_price()
+
+        print("🔥 FINAL PRICE USED:", price)
 
         # ATM
         atm = find_atm(price)
 
         # Option Chain
         option_chain = get_option_chain()
-
         call_oi = option_chain["call_oi"]
         put_oi = option_chain["put_oi"]
 
@@ -94,7 +94,7 @@ class DeviBrain:
         # Signal
         signal = classify_signal(score)
 
-        # ML Training Prediction
+        # ML Training
         ml_model = train_model()
         ml_trend = predict_trend(ml_model, price)
 
