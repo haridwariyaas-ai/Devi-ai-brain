@@ -1,3 +1,4 @@
+print("🚀 NEW CODE RUNNING")
 import streamlit as st
 from ai_engine.brain import DeviBrain
 
