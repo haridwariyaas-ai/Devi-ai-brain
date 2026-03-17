@@ -2,6 +2,7 @@ from market_data.price_data import get_nifty_price
 from market_data.option_chain import get_option_chain
 from market_data.upstox_option_chain import get_upstox_option_chain
 from market_data.upstox_live import get_upstox_live_chain
+from market_data.upstox_real import get_upstox_price  # ✅ NEW
 
 from utils.atm import find_atm
 
@@ -22,12 +23,12 @@ from ai_engine.memory import save_memory
 from ai_engine.decision_engine import final_decision
 from ai_engine.ml_model import predict_market
 
-# ✅ V11 Learning
+# V11 Learning
 from ai_engine.training_data import load_data
 from ai_engine.learning_engine import evaluate_trade
 from ai_engine.accuracy_tracker import update_accuracy
 
-# ✅ ML Training
+# ML Training
 from ai_engine.ml_trainer import train_model, predict_trend
 
 
@@ -35,51 +36,69 @@ class DeviBrain:
 
     def run_cycle(self):
 
-        price = get_nifty_price()
+        # 🔥 V12 REAL PRICE (Upstox + fallback)
+        price = get_upstox_price()
 
+        if price is None:
+            price = get_nifty_price()
+
+        # ATM
         atm = find_atm(price)
 
+        # Option Chain
         option_chain = get_option_chain()
 
         call_oi = option_chain["call_oi"]
         put_oi = option_chain["put_oi"]
 
+        # PCR
         pcr = calculate_pcr(call_oi, put_oi)
 
+        # Bias
         bias = detect_bias(call_oi, put_oi)
 
+        # Strategy
         strategy = generate_strategy(bias, pcr)
 
+        # Support / Resistance
         support, resistance = calculate_support_resistance(price)
 
+        # Candle
         candle = detect_candle()
 
+        # Probability
         probability = calculate_probability(bias, pcr)
 
+        # Trend
         trend = detect_trend()
 
+        # Volume
         volume, volume_strength = analyze_volume()
 
+        # Risk
         risk = risk_manager(probability, trend)
 
+        # Decision
         decision = final_decision(strategy, probability, risk)
 
+        # Heatmap
         live_chain = get_upstox_option_chain()
-
         heatmap_support, heatmap_resistance = oi_heatmap(live_chain)
 
+        # ML Prediction
         ml_prediction = predict_market()
 
+        # Trade Score
         score = trade_score(probability, ml_prediction["confidence"], trend, volume_strength)
 
+        # Signal
         signal = classify_signal(score)
 
-        # ✅ ML MODEL TRAINING
+        # ML Training Prediction
         ml_model = train_model()
-
         ml_trend = predict_trend(ml_model, price)
 
-        # ✅ MEMORY
+        # Memory Save
         memory_data = {
             "price": price,
             "bias": bias,
@@ -89,13 +108,12 @@ class DeviBrain:
 
         save_memory(memory_data)
 
-        # ✅ LEARNING
+        # Learning
         actual_market = "Bullish"
-
         trade_result = evaluate_trade(ml_prediction["direction"], actual_market)
-
         accuracy = update_accuracy(trade_result)
 
+        # Final Output
         result = {
 
             "NIFTY_PRICE": price,
@@ -134,10 +152,8 @@ class DeviBrain:
             "TRADE_SCORE": score,
             "AI_SIGNAL": signal,
 
-            # ✅ ML Output
             "ML_TREND_PREDICTION": ml_trend,
 
-            # ✅ Learning Output
             "TRADE_RESULT": trade_result,
             "ACCURACY": accuracy
 
