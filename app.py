@@ -1,11 +1,15 @@
-print("🔥🔥 APP NEW VERSION RUNNING 🔥🔥")
-
+import streamlit as st
 from ai_engine.brain import DeviBrain
 
-import random
-print("🔥 TEST PRICE:", random.randint(22000, 23000))
+st.set_page_config(page_title="Devi AI Brain", layout="centered")
 
+st.title("🤖 Devi AI Trading Brain")
+
+# Run AI
 brain = DeviBrain()
 result = brain.run_cycle()
 
-print(result)
+st.subheader("📊 AI Output")
+
+# Show result properly
+st.json(result)
