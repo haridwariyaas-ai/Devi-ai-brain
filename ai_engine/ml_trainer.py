@@ -8,10 +8,7 @@ def train_model():
     try:
         df = pd.read_csv("data/nifty_history.csv")
 
-        # Features (X)
         X = df[["price"]]
-
-        # Target (Y)
         y = df["trend"]
 
         model.fit(X, y)
@@ -21,3 +18,14 @@ def train_model():
     except Exception as e:
         print("Training Error:", e)
         return None
+
+
+def predict_trend(model, price):
+
+    try:
+        prediction = model.predict([[price]])
+
+        return prediction[0]
+
+    except:
+        return "Sideways"
