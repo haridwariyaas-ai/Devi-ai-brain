@@ -1,13 +1,11 @@
-print("🚀 NEW CODE RUNNING")
-import streamlit as st
+print("🔥🔥 APP NEW VERSION RUNNING 🔥🔥")
+
 from ai_engine.brain import DeviBrain
 
-st.title("Devi AI Brain V4")
+import random
+print("🔥 TEST PRICE:", random.randint(22000, 23000))
 
 brain = DeviBrain()
+result = brain.run_cycle()
 
-if st.button("Run AI Analysis"):
-
-    result = brain.run_cycle()
-
-    st.json(result)
+print(result)
