@@ -22,72 +22,64 @@ from ai_engine.memory import save_memory
 from ai_engine.decision_engine import final_decision
 from ai_engine.ml_model import predict_market
 
-# ✅ V11 NEW IMPORTS
+# ✅ V11 Learning
 from ai_engine.training_data import load_data
 from ai_engine.learning_engine import evaluate_trade
 from ai_engine.accuracy_tracker import update_accuracy
+
+# ✅ ML Training
+from ai_engine.ml_trainer import train_model, predict_trend
 
 
 class DeviBrain:
 
     def run_cycle(self):
 
-        # 1️⃣ Price
         price = get_nifty_price()
 
-        # 2️⃣ ATM
         atm = find_atm(price)
 
-        # 3️⃣ Option Chain
         option_chain = get_option_chain()
 
         call_oi = option_chain["call_oi"]
         put_oi = option_chain["put_oi"]
 
-        # 4️⃣ PCR
         pcr = calculate_pcr(call_oi, put_oi)
 
-        # 5️⃣ Bias
         bias = detect_bias(call_oi, put_oi)
 
-        # 6️⃣ Strategy
         strategy = generate_strategy(bias, pcr)
 
-        # 7️⃣ Support / Resistance
         support, resistance = calculate_support_resistance(price)
 
-        # 8️⃣ Candle Pattern
         candle = detect_candle()
 
-        # 9️⃣ Probability
         probability = calculate_probability(bias, pcr)
 
-        # 🔟 Trend
         trend = detect_trend()
 
-        # 11️⃣ Volume
         volume, volume_strength = analyze_volume()
 
-        # 12️⃣ Risk
         risk = risk_manager(probability, trend)
 
-        # 13️⃣ Decision
         decision = final_decision(strategy, probability, risk)
 
-        # 14️⃣ Option Chain Heatmap
         live_chain = get_upstox_option_chain()
+
         heatmap_support, heatmap_resistance = oi_heatmap(live_chain)
 
-        # 15️⃣ ML Prediction
         ml_prediction = predict_market()
 
-        # 16️⃣ Trade Score
         score = trade_score(probability, ml_prediction["confidence"], trend, volume_strength)
 
-        # 17️⃣ Signal
         signal = classify_signal(score)
 
-        # 18️⃣ Memory Save
+        # ✅ ML MODEL TRAINING
+        ml_model = train_model()
+
+        ml_trend = predict_trend(ml_model, price)
+
+        # ✅ MEMORY
         memory_data = {
             "price": price,
             "bias": bias,
@@ -97,25 +89,12 @@ class DeviBrain:
 
         save_memory(memory_data)
 
-        # =========================
-        # ✅ V11 LEARNING SECTION
-        # =========================
-
-        # Load historical data
-        data = load_data()
-
-        # Dummy actual market (future me real data aayega)
+        # ✅ LEARNING
         actual_market = "Bullish"
 
-        # Evaluate prediction
         trade_result = evaluate_trade(ml_prediction["direction"], actual_market)
 
-        # Update accuracy
         accuracy = update_accuracy(trade_result)
-
-        # =========================
-        # FINAL OUTPUT
-        # =========================
 
         result = {
 
@@ -153,10 +132,12 @@ class DeviBrain:
             "ML_CONFIDENCE": ml_prediction["confidence"],
 
             "TRADE_SCORE": score,
-
             "AI_SIGNAL": signal,
 
-            # ✅ V11 Output
+            # ✅ ML Output
+            "ML_TREND_PREDICTION": ml_trend,
+
+            # ✅ Learning Output
             "TRADE_RESULT": trade_result,
             "ACCURACY": accuracy
 
