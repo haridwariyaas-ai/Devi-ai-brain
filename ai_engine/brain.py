@@ -1,6 +1,6 @@
 from market_data.upstox_real import get_upstox_price
 from market_data.price_data import get_nifty_price
-from market_data.option_chain import get_option_chain
+from market_data.upstox_oi import get_real_oi  # ✅ NEW
 
 from utils.atm import find_atm
 
@@ -23,22 +23,25 @@ class DeviBrain:
 
     def run_cycle(self):
 
-        # 🔥 REAL PRICE (FINAL FIX)
+        # 🔥 STEP 1 — REAL PRICE
         price = get_upstox_price()
 
         if price is None:
-            print("⚠️ Upstox failed → fallback")
+            print("⚠️ Upstox price failed → fallback")
             price = get_nifty_price()
 
-        print("🔥 FINAL PRICE USED:", price)
+        print("🔥 FINAL PRICE:", price)
+
+        # 🔥 STEP 2 — REAL OI (NEW)
+        oi_data = get_real_oi()
+
+        call_oi = oi_data["call_oi"]
+        put_oi = oi_data["put_oi"]
+
+        print("📊 REAL OI:", call_oi, put_oi)
 
         # ATM
         atm = find_atm(price)
-
-        # Option Chain
-        option_chain = get_option_chain()
-        call_oi = option_chain["call_oi"]
-        put_oi = option_chain["put_oi"]
 
         # PCR
         pcr = calculate_pcr(call_oi, put_oi)
@@ -76,23 +79,31 @@ class DeviBrain:
         # Signal
         signal = classify_signal(score)
 
+        # Final Output
         result = {
             "NIFTY_PRICE": price,
             "ATM_STRIKE": atm,
+
             "CALL_OI": call_oi,
             "PUT_OI": put_oi,
+
             "PCR": pcr,
             "MARKET_BIAS": bias,
             "AI_STRATEGY": strategy,
+
             "SUPPORT": support,
             "RESISTANCE": resistance,
+
             "CANDLE_PATTERN": candle,
             "PROBABILITY": probability,
+
             "TREND": trend,
             "VOLUME": volume,
             "VOLUME_STRENGTH": volume_strength,
+
             "RISK_LEVEL": risk,
             "AI_DECISION": decision,
+
             "TRADE_SCORE": score,
             "AI_SIGNAL": signal
         }
