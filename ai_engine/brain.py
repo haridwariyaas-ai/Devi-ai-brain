@@ -33,7 +33,9 @@ class DeviBrain:
         print("🔥 FINAL PRICE:", price)
 
         # 🔥 STEP 2 — REAL OI (NEW)
-        oi_data = get_real_oi(price)
+        from market_data.nse_oi import get_nse_oi
+
+oi_data = get_nse_oi(price)
 
         call_oi = oi_data["call_oi"]
         put_oi = oi_data["put_oi"]
