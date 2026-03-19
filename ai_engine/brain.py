@@ -33,7 +33,7 @@ class DeviBrain:
         print("🔥 FINAL PRICE:", price)
 
         # 🔥 STEP 2 — REAL OI (NEW)
-        oi_data = get_real_oi()
+        oi_data = get_real_oi(price)
 
         call_oi = oi_data["call_oi"]
         put_oi = oi_data["put_oi"]
