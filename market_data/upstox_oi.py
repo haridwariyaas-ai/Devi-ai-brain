@@ -1,5 +1,7 @@
 import requests
 import os
+from datetime import datetime
+
 
 def get_real_oi(price):
 
@@ -9,49 +11,88 @@ def get_real_oi(price):
         print("❌ TOKEN MISSING")
         return {"call_oi": 0, "put_oi": 0}
 
-    # 🔥 STEP 1 — ATM CALCULATION
-    atm = round(price / 50) * 50
-
-    # ⚠️ IMPORTANT: expiry update karna padega (example)
-    expiry = "24MAR"
-
-    ce_symbol = f"NSE_FO|NIFTY{expiry}{atm}CE"
-    pe_symbol = f"NSE_FO|NIFTY{expiry}{atm}PE"
-
-    print("🎯 SYMBOLS:", ce_symbol, pe_symbol)
-
-    url = "https://api.upstox.com/v2/market-quote/quotes"
-
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json"
     }
 
+    # 🔥 STEP 1 — Get instruments (NIFTY options)
+    url = "https://api.upstox.com/v2/option/contract"
+
     params = {
-        "instrument_key": f"{ce_symbol},{pe_symbol}"
+        "instrument_key": "NSE_INDEX|Nifty 50"
     }
 
     try:
-        r = requests.get(url, headers=headers, params=params)
+        res = requests.get(url, headers=headers, params=params)
+        data = res.json()
 
-        print("📡 STATUS:", r.status_code)
-        print("📡 RESPONSE:", r.text)
+        contracts = data.get("data", [])
 
-        data = r.json()
+        if not contracts:
+            print("❌ No contracts found")
+            return {"call_oi": 0, "put_oi": 0}
+
+        # 🔥 STEP 2 — Find nearest expiry
+        today = datetime.now().date()
+
+        expiries = sorted(list(set([c["expiry"] for c in contracts])))
+
+        nearest_expiry = None
+
+        for exp in expiries:
+            exp_date = datetime.strptime(exp, "%Y-%m-%d").date()
+            if exp_date >= today:
+                nearest_expiry = exp
+                break
+
+        print("📅 NEAREST EXPIRY:", nearest_expiry)
+
+        # 🔥 STEP 3 — ATM strike
+        atm = round(price / 50) * 50
+
+        # 🔥 STEP 4 — Find matching CE & PE
+        ce = None
+        pe = None
+
+        for c in contracts:
+            if c["expiry"] == nearest_expiry and c["strike_price"] == atm:
+
+                if c["option_type"] == "CE":
+                    ce = c["instrument_key"]
+
+                elif c["option_type"] == "PE":
+                    pe = c["instrument_key"]
+
+        print("🎯 CE:", ce)
+        print("🎯 PE:", pe)
+
+        if not ce or not pe:
+            print("❌ ATM instruments not found")
+            return {"call_oi": 0, "put_oi": 0}
+
+        # 🔥 STEP 5 — Fetch OI
+        quote_url = "https://api.upstox.com/v2/market-quote/quotes"
+
+        params = {
+            "instrument_key": f"{ce},{pe}"
+        }
+
+        res = requests.get(quote_url, headers=headers, params=params)
+        quote_data = res.json()
 
         call_oi = 0
         put_oi = 0
 
-        for key in data.get("data", {}):
-            item = data["data"][key]
+        for key, val in quote_data.get("data", {}).items():
 
-            if "CE" in key:
-                call_oi = item.get("oi", 0)
+            if key == ce:
+                call_oi = val.get("oi", 0)
 
-            elif "PE" in key:
-                put_oi = item.get("oi", 0)
+            elif key == pe:
+                put_oi = val.get("oi", 0)
 
-        print("✅ OI:", call_oi, put_oi)
+        print("✅ FINAL OI:", call_oi, put_oi)
 
         return {
             "call_oi": call_oi,
