@@ -8,6 +8,10 @@ def fetch_and_save_data():
 
     print("🔑 TOKEN:", token)
 
+    if not token:
+        print("❌ TOKEN NOT FOUND")
+        return None
+
     url = "https://api.upstox.com/v2/market-quote/ltp"
 
     headers = {
@@ -20,12 +24,12 @@ def fetch_and_save_data():
     }
 
     try:
-        r = requests.get(url, headers=headers, params=params)
+        response = requests.get(url, headers=headers, params=params)
 
-        print("📡 STATUS:", r.status_code)
-        print("📡 RESPONSE TEXT:", r.text)
+        print("📡 STATUS:", response.status_code)
+        print("📡 RESPONSE:", response.text)
 
-        data = r.json()
+        data = response.json()
 
         if "data" in data and "NSE_INDEX|Nifty 50" in data["data"]:
 
@@ -39,7 +43,7 @@ def fetch_and_save_data():
             return price
 
         else:
-            print("❌ DATA NOT FOUND")
+            print("❌ DATA FORMAT ISSUE")
 
     except Exception as e:
         print("❌ ERROR:", e)
