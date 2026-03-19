@@ -1,5 +1,5 @@
 from market_data.price_data import get_nifty_price
-from market_data.csv_price import get_csv_price  # ✅ IMPORTANT
+from market_data.upstox_fetch_csv import fetch_and_save_data  # ✅ NEW
 
 from market_data.option_chain import get_option_chain
 
@@ -24,43 +24,61 @@ class DeviBrain:
 
     def run_cycle(self):
 
-        # 🔥 FORCE CSV (NO API for now)
-        price = get_csv_price()
+        # 🔥 STEP 1 — FETCH REAL DATA FROM UPSTOX + SAVE CSV
+        price = fetch_and_save_data()
 
+        # fallback if API fails
         if price is None:
+            print("⚠️ Upstox failed, using fallback")
             price = get_nifty_price()
 
         print("🔥 FINAL PRICE USED:", price)
 
+        # ATM
         atm = find_atm(price)
 
+        # Option Chain (still dummy for now)
         option_chain = get_option_chain()
         call_oi = option_chain["call_oi"]
         put_oi = option_chain["put_oi"]
 
+        # PCR
         pcr = calculate_pcr(call_oi, put_oi)
+
+        # Bias
         bias = detect_bias(call_oi, put_oi)
 
+        # Strategy
         strategy = generate_strategy(bias, pcr)
 
+        # Support / Resistance
         support, resistance = calculate_support_resistance(price)
 
+        # Candle
         candle = detect_candle()
 
+        # Probability
         probability = calculate_probability(bias, pcr)
 
+        # Trend
         trend = detect_trend()
 
+        # Volume
         volume, volume_strength = analyze_volume()
 
+        # Risk
         risk = risk_manager(probability, trend)
 
+        # Decision
         decision = final_decision(strategy, probability, risk)
 
+        # Trade Score
         score = trade_score(probability, 70, trend, volume_strength)
 
+        # Signal
         signal = classify_signal(score)
 
+        # Final Output
         result = {
             "NIFTY_PRICE": price,
             "ATM_STRIKE": atm,
