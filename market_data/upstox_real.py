@@ -8,7 +8,7 @@ def get_upstox_price():
     print("🔑 TOKEN:", token)
 
     if not token:
-        print("❌ TOKEN NOT FOUND")
+        print("❌ TOKEN MISSING")
         return None
 
     url = "https://api.upstox.com/v2/market-quote/ltp"
@@ -18,6 +18,7 @@ def get_upstox_price():
         "Accept": "application/json"
     }
 
+    # ✅ Correct instrument (IMPORTANT FIX)
     params = {
         "instrument_key": "NSE_INDEX|Nifty 50"
     }
@@ -26,21 +27,21 @@ def get_upstox_price():
         response = requests.get(url, headers=headers, params=params)
 
         print("📡 STATUS:", response.status_code)
-        print("📡 RAW TEXT:", response.text)
+        print("📡 RESPONSE:", response.text)
+
+        if response.status_code != 200:
+            return None
 
         data = response.json()
 
-        print("📊 JSON:", data)
+        # ✅ SAFE EXTRACTION
+        if "data" in data:
+            for key in data["data"]:
+                price = data["data"][key]["last_price"]
+                print("✅ REAL PRICE:", price)
+                return price
 
-        if "data" in data and "NSE_INDEX|Nifty 50" in data["data"]:
-            price = data["data"]["NSE_INDEX|Nifty 50"]["last_price"]
-
-            print("✅ REAL PRICE:", price)
-
-            return price
-
-        else:
-            print("❌ DATA FORMAT ISSUE")
+        print("❌ DATA FORMAT ISSUE")
 
     except Exception as e:
         print("❌ ERROR:", e)
