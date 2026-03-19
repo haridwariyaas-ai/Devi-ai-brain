@@ -1,6 +1,6 @@
 from market_data.upstox_real import get_upstox_price
 from market_data.price_data import get_nifty_price
-from market_data.upstox_oi import get_real_oi  # ✅ NEW
+from market_data.nse_oi import get_nse_oi  # ✅ NSE OI
 
 from utils.atm import find_atm
 
@@ -23,66 +23,65 @@ class DeviBrain:
 
     def run_cycle(self):
 
-        # 🔥 STEP 1 — REAL PRICE
+        # 🔥 STEP 1 — REAL PRICE (Upstox)
         price = get_upstox_price()
 
         if price is None:
-            print("⚠️ Upstox price failed → fallback")
+            print("⚠️ Upstox failed → fallback")
             price = get_nifty_price()
 
         print("🔥 FINAL PRICE:", price)
 
-        # 🔥 STEP 2 — REAL OI (NEW)
-        from market_data.nse_oi import get_nse_oi
-
-oi_data = get_nse_oi(price)
+        # 🔥 STEP 2 — REAL OI (NSE)
+        oi_data = get_nse_oi(price)
 
         call_oi = oi_data["call_oi"]
         put_oi = oi_data["put_oi"]
 
-        print("📊 REAL OI:", call_oi, put_oi)
+        print("📊 NSE OI:", call_oi, put_oi)
 
-        # ATM
+        # 🔥 STEP 3 — ATM
         atm = find_atm(price)
 
-        # PCR
+        # 🔥 STEP 4 — PCR
         pcr = calculate_pcr(call_oi, put_oi)
 
-        # Bias
+        # 🔥 STEP 5 — BIAS
         bias = detect_bias(call_oi, put_oi)
 
-        # Strategy
+        # 🔥 STEP 6 — STRATEGY
         strategy = generate_strategy(bias, pcr)
 
-        # Support / Resistance
+        # 🔥 STEP 7 — SUPPORT / RESISTANCE
         support, resistance = calculate_support_resistance(price)
 
-        # Candle
+        # 🔥 STEP 8 — CANDLE
         candle = detect_candle()
 
-        # Probability
+        # 🔥 STEP 9 — PROBABILITY
         probability = calculate_probability(bias, pcr)
 
-        # Trend
+        # 🔥 STEP 10 — TREND
         trend = detect_trend()
 
-        # Volume
+        # 🔥 STEP 11 — VOLUME
         volume, volume_strength = analyze_volume()
 
-        # Risk
+        # 🔥 STEP 12 — RISK
         risk = risk_manager(probability, trend)
 
-        # Decision
+        # 🔥 STEP 13 — DECISION
         decision = final_decision(strategy, probability, risk)
 
-        # Trade Score
+        # 🔥 STEP 14 — SCORE
         score = trade_score(probability, 70, trend, volume_strength)
 
-        # Signal
+        # 🔥 STEP 15 — SIGNAL
         signal = classify_signal(score)
 
-        # Final Output
+        # 🔥 FINAL OUTPUT
         result = {
+
             "NIFTY_PRICE": price,
             "ATM_STRIKE": atm,
 
@@ -108,6 +107,7 @@ oi_data = get_nse_oi(price)
 
             "TRADE_SCORE": score,
             "AI_SIGNAL": signal
+
         }
 
         return result
