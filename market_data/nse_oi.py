@@ -18,43 +18,38 @@ def get_nse_oi(price):
 
         session = requests.Session()
 
-        # STEP 1 — cookie set
+        # cookie set
         session.get("https://www.nseindia.com", headers=headers)
-
         time.sleep(1)
 
-        # STEP 2 — fetch data
         response = session.get(url, headers=headers)
 
         print("📡 NSE STATUS:", response.status_code)
+
+        if response.status_code != 200:
+            print("❌ NSE BLOCKED")
+            return {"call_oi": 0, "put_oi": 0}
 
         data = response.json()
 
         records = data.get("records", {}).get("data", [])
 
-        print("📊 RECORD COUNT:", len(records))
+        print("📊 TOTAL STRIKES:", len(records))
 
         if not records:
             return {"call_oi": 0, "put_oi": 0}
 
-        atm = round(price / 50) * 50
+        # 🔥 STEP — FIND NEAREST STRIKE (IMPORTANT FIX)
+        nearest = min(records, key=lambda x: abs(x["strikePrice"] - price))
 
-        call_oi = 0
-        put_oi = 0
+        strike = nearest["strikePrice"]
 
-        for item in records:
+        print("🎯 NEAREST STRIKE:", strike)
 
-            if item.get("strikePrice") == atm:
+        call_oi = nearest.get("CE", {}).get("openInterest", 0)
+        put_oi = nearest.get("PE", {}).get("openInterest", 0)
 
-                if "CE" in item:
-                    call_oi = item["CE"].get("openInterest", 0)
-
-                if "PE" in item:
-                    put_oi = item["PE"].get("openInterest", 0)
-
-                break
-
-        print("✅ NSE OI:", call_oi, put_oi)
+        print("✅ FINAL OI:", call_oi, put_oi)
 
         return {
             "call_oi": call_oi,
