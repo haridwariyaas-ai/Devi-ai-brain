@@ -1,5 +1,8 @@
+print("🔥 NSE OI FILE RUNNING 🔥")
+
 import requests
 import time
+
 
 def get_nse_oi(price):
 
@@ -7,21 +10,20 @@ def get_nse_oi(price):
         url = "https://www.nseindia.com/api/option-chain-indices?symbol=NIFTY"
 
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+            "User-Agent": "Mozilla/5.0",
             "Accept-Language": "en-US,en;q=0.9",
-            "Accept-Encoding": "gzip, deflate, br",
             "Referer": "https://www.nseindia.com/",
             "Connection": "keep-alive"
         }
 
         session = requests.Session()
 
-        # 🔥 STEP 1 — cookie generate
+        # STEP 1 — cookie set
         session.get("https://www.nseindia.com", headers=headers)
 
-        time.sleep(1)  # VERY IMPORTANT
+        time.sleep(1)
 
-        # 🔥 STEP 2 — actual data fetch
+        # STEP 2 — fetch data
         response = session.get(url, headers=headers)
 
         print("📡 NSE STATUS:", response.status_code)
@@ -30,8 +32,9 @@ def get_nse_oi(price):
 
         records = data.get("records", {}).get("data", [])
 
+        print("📊 RECORD COUNT:", len(records))
+
         if not records:
-            print("❌ EMPTY DATA FROM NSE")
             return {"call_oi": 0, "put_oi": 0}
 
         atm = round(price / 50) * 50
