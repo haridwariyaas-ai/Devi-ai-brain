@@ -1,55 +1,66 @@
 import requests
 import os
 
-
 def get_upstox_oi(price):
 
     token = os.getenv("UPSTOX_ACCESS_TOKEN")
-
-    if not token:
-        print("❌ TOKEN MISSING")
-        return {"call_oi": 0, "put_oi": 0}
 
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/json"
     }
 
-    # 🔥 ATM STRIKE
-    atm = round(price / 50) * 50
-
-    # ⚠️ IMPORTANT: CURRENT WEEK EXPIRY (UPDATE IF NEEDED)
-    expiry = "27MAR"   # 👉 ye correct weekly expiry hona chahiye
-
-    ce = f"NSE_FO|NIFTY{expiry}{atm}CE"
-    pe = f"NSE_FO|NIFTY{expiry}{atm}PE"
-
-    print("🎯 SYMBOL:", ce, pe)
-
-    url = "https://api.upstox.com/v2/market-quote/quotes"
+    # 🔥 STEP 1 — fetch all option contracts
+    url = "https://api.upstox.com/v2/option/contract"
 
     params = {
-        "instrument_key": f"{ce},{pe}"
+        "instrument_key": "NSE_INDEX|Nifty 50"
     }
 
     try:
-        r = requests.get(url, headers=headers, params=params)
+        res = requests.get(url, headers=headers, params=params)
+        data = res.json()
 
-        print("📡 STATUS:", r.status_code)
-        print("📡 RESPONSE:", r.text)
+        contracts = data.get("data", [])
 
-        data = r.json()
+        if not contracts:
+            print("❌ NO CONTRACTS")
+            return {"call_oi": 0, "put_oi": 0}
 
-        call_oi = 0
-        put_oi = 0
+        # 🔥 STEP 2 — ATM strike
+        atm = round(price / 50) * 50
 
-        for key, val in data.get("data", {}).items():
+        ce_key = None
+        pe_key = None
 
-            if key == ce:
-                call_oi = val.get("oi", 0)
+        for c in contracts:
 
-            elif key == pe:
-                put_oi = val.get("oi", 0)
+            if c["strike_price"] == atm:
+
+                if c["option_type"] == "CE":
+                    ce_key = c["instrument_key"]
+
+                elif c["option_type"] == "PE":
+                    pe_key = c["instrument_key"]
+
+        print("🎯 REAL KEYS:", ce_key, pe_key)
+
+        if not ce_key or not pe_key:
+            print("❌ KEYS NOT FOUND")
+            return {"call_oi": 0, "put_oi": 0}
+
+        # 🔥 STEP 3 — fetch OI using real keys
+        quote_url = "https://api.upstox.com/v2/market-quote/quotes"
+
+        params = {
+            "instrument_key": f"{ce_key},{pe_key}"
+        }
+
+        res = requests.get(quote_url, headers=headers, params=params)
+        quote_data = res.json()
+
+        call_oi = quote_data["data"][ce_key].get("oi", 0)
+        put_oi = quote_data["data"][pe_key].get("oi", 0)
 
         print("✅ FINAL OI:", call_oi, put_oi)
 
