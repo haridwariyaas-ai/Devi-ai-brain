@@ -15,11 +15,11 @@ def get_upstox_oi(price):
         "Accept": "application/json"
     }
 
-    # 🔥 STEP 1 — ATM strike
+    # 🔥 ATM STRIKE
     atm = round(price / 50) * 50
 
-    # ⚠️ IMPORTANT: expiry must be correct weekly expiry
-    expiry = "25SEP"   # 👉 isko baad me auto karenge
+    # ⚠️ IMPORTANT: CURRENT WEEK EXPIRY (UPDATE IF NEEDED)
+    expiry = "27MAR"   # 👉 ye correct weekly expiry hona chahiye
 
     ce = f"NSE_FO|NIFTY{expiry}{atm}CE"
     pe = f"NSE_FO|NIFTY{expiry}{atm}PE"
@@ -51,7 +51,7 @@ def get_upstox_oi(price):
             elif key == pe:
                 put_oi = val.get("oi", 0)
 
-        print("✅ OI:", call_oi, put_oi)
+        print("✅ FINAL OI:", call_oi, put_oi)
 
         return {
             "call_oi": call_oi,
