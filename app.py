@@ -4,8 +4,7 @@ st.set_page_config(page_title="Devi AI Brain", layout="centered")
 
 st.title("🤖 Devi AI Trading Brain")
 
-# DEBUG (force check)
-st.write("🔥 APP NEW VERSION RUNNING")
+st.write("🔥 APP LIVE VERSION RUNNING")
 
 from ai_engine.brain import DeviBrain
 
