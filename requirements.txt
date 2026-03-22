@@ -3,4 +3,3 @@ requests
 scikit-learn
 pandas
 websocket-client
-upstox-python-sdk
