@@ -4,62 +4,104 @@ import os
 
 def get_upstox_oi(price):
 
-    df = pd.read_csv("data/NSE_FO.csv")
+    try:
+        # 🔥 LOAD CSV
+        df = pd.read_csv("data/NSE_FO.csv")
 
-    # 🔥 Only NIFTY options
-    df = df[df["name"] == "NIFTY"]
+        print("📊 CSV LOADED:", len(df))
 
-    # 🔥 expiry convert
-    df["expiry"] = pd.to_datetime(df["expiry"])
+        # 🔥 ONLY NIFTY OPTIONS (FIXED)
+        df = df[df["tradingsymbol"].str.contains("NIFTY", na=False)]
 
-    # 🔥 nearest expiry
-    nearest_expiry = df["expiry"].min()
-    df = df[df["expiry"] == nearest_expiry]
+        print("📊 AFTER NIFTY FILTER:", len(df))
 
-    # 🔥 ATM strike
-    atm = round(price / 50) * 50
+        # 🔥 CONVERT EXPIRY
+        df["expiry"] = pd.to_datetime(df["expiry"], errors="coerce")
 
-    # 🔥 closest strike (NOTE: column = strike)
-    df["diff"] = abs(df["strike"] - atm)
-    atm_strike = df.sort_values("diff").iloc[0]["strike"]
+        # 🔥 REMOVE INVALID
+        df = df.dropna(subset=["expiry"])
 
-    df = df[df["strike"] == atm_strike]
+        # 🔥 ONLY FUTURE EXPIRY
+        today = pd.Timestamp.today()
+        df = df[df["expiry"] >= today]
 
-    # 🔥 CE / PE (NOTE: column = option_type)
-    ce_row = df[df["option_type"] == "CE"].iloc[0]
-    pe_row = df[df["option_type"] == "PE"].iloc[0]
+        print("📊 FUTURE CONTRACTS:", len(df))
 
-    ce_key = ce_row["instrument_key"]
-    pe_key = pe_row["instrument_key"]
+        if df.empty:
+            print("❌ NO FUTURE DATA")
+            return {"call_oi": 0, "put_oi": 0}
 
-    print("🎯 KEYS:", ce_key, pe_key)
+        # 🔥 NEAREST EXPIRY
+        nearest_expiry = df["expiry"].min()
+        df = df[df["expiry"] == nearest_expiry]
 
-    # 🔥 API call
-    token = os.getenv("UPSTOX_ACCESS_TOKEN")
+        print("📅 EXPIRY:", nearest_expiry)
 
-    headers = {
-        "Authorization": f"Bearer {token}"
-    }
+        # 🔥 ATM STRIKE
+        atm = round(price / 50) * 50
 
-    url = "https://api.upstox.com/v2/market-quote/quotes"
+        # 🔥 ENSURE STRIKE COLUMN EXISTS
+        if "strike" not in df.columns:
+            print("❌ STRIKE COLUMN MISSING")
+            return {"call_oi": 0, "put_oi": 0}
 
-    params = {
-        "instrument_key": f"{ce_key},{pe_key}"
-    }
+        # 🔥 CLOSEST STRIKE
+        df["diff"] = abs(df["strike"] - atm)
+        atm_strike = df.sort_values("diff").iloc[0]["strike"]
 
-    r = requests.get(url, headers=headers, params=params)
-    data = r.json()
+        df = df[df["strike"] == atm_strike]
 
-    if "data" not in data:
-        print("❌ BAD RESPONSE:", data)
-        return {"call_oi": 0, "put_oi": 0}
+        print("🎯 ATM STRIKE:", atm_strike)
 
-    call_oi = data["data"][ce_key]["oi"]
-    put_oi = data["data"][pe_key]["oi"]
+        # 🔥 CE / PE
+        ce_df = df[df["option_type"] == "CE"]
+        pe_df = df[df["option_type"] == "PE"]
 
-    print("✅ FINAL OI:", call_oi, put_oi)
+        if ce_df.empty or pe_df.empty:
+            print("❌ CE/PE NOT FOUND")
+            return {"call_oi": 0, "put_oi": 0}
 
-    return {
-        "call_oi": call_oi,
-        "put_oi": put_oi
-    }
+        ce_row = ce_df.iloc[0]
+        pe_row = pe_df.iloc[0]
+
+        ce_key = ce_row["instrument_key"]
+        pe_key = pe_row["instrument_key"]
+
+        print("🎯 KEYS:", ce_key, pe_key)
+
+        # 🔥 FETCH OI
+        token = os.getenv("UPSTOX_ACCESS_TOKEN")
+
+        headers = {
+            "Authorization": f"Bearer {token}"
+        }
+
+        url = "https://api.upstox.com/v2/market-quote/quotes"
+
+        params = {
+            "instrument_key": f"{ce_key},{pe_key}"
+        }
+
+        r = requests.get(url, headers=headers, params=params)
+        data = r.json()
+
+        print("📡 API RESPONSE:", data)
+
+        if "data" not in data:
+            print("❌ INVALID API RESPONSE")
+            return {"call_oi": 0, "put_oi": 0}
+
+        call_oi = data["data"].get(ce_key, {}).get("oi", 0)
+        put_oi = data["data"].get(pe_key, {}).get("oi", 0)
+
+        print("✅ FINAL OI:", call_oi, put_oi)
+
+        return {
+            "call_oi": call_oi,
+            "put_oi": put_oi
+        }
+
+    except Exception as e:
+        print("❌ ERROR:", e)
+
+    return {"call_oi": 0, "put_oi": 0}
