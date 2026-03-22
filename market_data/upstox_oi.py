@@ -4,13 +4,12 @@ import os
 
 def get_upstox_oi(price):
 
-    # 🔥 CSV load
     df = pd.read_csv("data/NSE_FO.csv")
 
-    # 🔥 NIFTY options filter
+    # 🔥 Only NIFTY options
     df = df[df["name"] == "NIFTY"]
 
-    # 🔥 expiry ko date format me convert
+    # 🔥 expiry convert
     df["expiry"] = pd.to_datetime(df["expiry"])
 
     # 🔥 nearest expiry
@@ -20,15 +19,15 @@ def get_upstox_oi(price):
     # 🔥 ATM strike
     atm = round(price / 50) * 50
 
-    # 🔥 closest strike find
-    df["diff"] = abs(df["strike_price"] - atm)
-    atm_strike = df.sort_values("diff").iloc[0]["strike_price"]
+    # 🔥 closest strike (NOTE: column = strike)
+    df["diff"] = abs(df["strike"] - atm)
+    atm_strike = df.sort_values("diff").iloc[0]["strike"]
 
-    df = df[df["strike_price"] == atm_strike]
+    df = df[df["strike"] == atm_strike]
 
-    # 🔥 CE / PE select
-    ce_row = df[df["instrument_type"] == "CE"].iloc[0]
-    pe_row = df[df["instrument_type"] == "PE"].iloc[0]
+    # 🔥 CE / PE (NOTE: column = option_type)
+    ce_row = df[df["option_type"] == "CE"].iloc[0]
+    pe_row = df[df["option_type"] == "PE"].iloc[0]
 
     ce_key = ce_row["instrument_key"]
     pe_key = pe_row["instrument_key"]
@@ -58,7 +57,7 @@ def get_upstox_oi(price):
     call_oi = data["data"][ce_key]["oi"]
     put_oi = data["data"][pe_key]["oi"]
 
-    print("✅ OI:", call_oi, put_oi)
+    print("✅ FINAL OI:", call_oi, put_oi)
 
     return {
         "call_oi": call_oi,
