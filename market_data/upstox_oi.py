@@ -1,83 +1,64 @@
+import pandas as pd
 import requests
 import os
 
 def get_upstox_oi(price):
 
+    # 🔥 CSV load
+    df = pd.read_csv("data/NSE_FO.csv")
+
+    # 🔥 NIFTY options filter
+    df = df[df["name"] == "NIFTY"]
+
+    # 🔥 expiry ko date format me convert
+    df["expiry"] = pd.to_datetime(df["expiry"])
+
+    # 🔥 nearest expiry
+    nearest_expiry = df["expiry"].min()
+    df = df[df["expiry"] == nearest_expiry]
+
+    # 🔥 ATM strike
+    atm = round(price / 50) * 50
+
+    # 🔥 closest strike find
+    df["diff"] = abs(df["strike_price"] - atm)
+    atm_strike = df.sort_values("diff").iloc[0]["strike_price"]
+
+    df = df[df["strike_price"] == atm_strike]
+
+    # 🔥 CE / PE select
+    ce_row = df[df["instrument_type"] == "CE"].iloc[0]
+    pe_row = df[df["instrument_type"] == "PE"].iloc[0]
+
+    ce_key = ce_row["instrument_key"]
+    pe_key = pe_row["instrument_key"]
+
+    print("🎯 KEYS:", ce_key, pe_key)
+
+    # 🔥 API call
     token = os.getenv("UPSTOX_ACCESS_TOKEN")
 
     headers = {
         "Authorization": f"Bearer {token}"
     }
 
-    # 🔥 STEP 1 — fetch option contracts
-    url = "https://api.upstox.com/v2/option/contract"
-
-    params = {
-        "instrument_key": "NSE_INDEX|Nifty 50"
-    }
-
-    r = requests.get(url, headers=headers, params=params)
-    data = r.json()
-
-    contracts = data.get("data", [])
-
-    if not contracts:
-        print("❌ NO CONTRACT DATA")
-        return {"call_oi": 0, "put_oi": 0}
-
-    # 🔥 STEP 2 — nearest expiry
-    expiries = sorted(list(set([c["expiry"] for c in contracts])))
-    nearest_expiry = expiries[0]
-
-    contracts = [c for c in contracts if c["expiry"] == nearest_expiry]
-
-    # 🔥 STEP 3 — ATM
-    atm = round(price / 50) * 50
-
-    closest = min(contracts, key=lambda x: abs(x["strike_price"] - atm))
-    atm = closest["strike_price"]
-
-    print("🎯 ATM:", atm)
-
-    ce_key = None
-    pe_key = None
-
-    for c in contracts:
-
-        if c["strike_price"] == atm:
-
-            opt = c.get("instrument_type") or c.get("option_type")
-
-            if opt == "CE":
-                ce_key = c["instrument_key"]
-
-            elif opt == "PE":
-                pe_key = c["instrument_key"]
-
-    print("🎯 KEYS:", ce_key, pe_key)
-
-    if not ce_key or not pe_key:
-        print("❌ KEYS NOT FOUND")
-        return {"call_oi": 0, "put_oi": 0}
-
-    # 🔥 STEP 4 — fetch OI
-    quote_url = "https://api.upstox.com/v2/market-quote/quotes"
+    url = "https://api.upstox.com/v2/market-quote/quotes"
 
     params = {
         "instrument_key": f"{ce_key},{pe_key}"
     }
 
-    r = requests.get(quote_url, headers=headers, params=params)
-    q = r.json()
+    r = requests.get(url, headers=headers, params=params)
+    data = r.json()
 
-    if "data" not in q:
-        print("❌ BAD RESPONSE:", q)
+    if "data" not in data:
+        print("❌ BAD RESPONSE:", data)
         return {"call_oi": 0, "put_oi": 0}
 
-    call_oi = q["data"][ce_key]["oi"]
-    put_oi = q["data"][pe_key]["oi"]
+    call_oi = data["data"][ce_key]["oi"]
+    put_oi = data["data"][pe_key]["oi"]
 
-    print("✅ FINAL OI:", call_oi, put_oi)
+    print("✅ OI:", call_oi, put_oi)
 
     return {
         "call_oi": call_oi,
