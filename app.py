@@ -6,6 +6,11 @@ st.title("🤖 Devi AI Trading Brain")
 
 st.write("🔥 Running Live System")
 
+# 🔥 TEMP STEP
+from market_data.instruments import download_instruments
+st.write("📥 Downloading instruments...")
+download_instruments()
+
 from ai_engine.brain import DeviBrain
 
 brain = DeviBrain()
