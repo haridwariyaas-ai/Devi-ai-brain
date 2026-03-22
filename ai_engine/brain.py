@@ -1,28 +1,17 @@
-from market_data.upstox_real import get_upstox_price
-from market_data.upstox_oi import get_upstox_oi
-
+from market_data.websocket_oi import start_websocket
 
 class DeviBrain:
 
     def run_cycle(self):
 
-        print("🔥 FETCH PRICE")
+        print("🔥 STARTING WEBSOCKET")
 
-        price = get_upstox_price()
+        data = start_websocket()
 
-        print("🔥 PRICE:", price)
-
-        print("🔥 FETCH OI")
-
-        oi_data = get_upstox_oi(price)
-
-        call_oi = oi_data["call_oi"]
-        put_oi = oi_data["put_oi"]
-
-        print("🔥 OI:", call_oi, put_oi)
+        print("🔥 LIVE DATA:", data)
 
         return {
-            "NIFTY_PRICE": price,
-            "CALL_OI": call_oi,
-            "PUT_OI": put_oi
+            "NIFTY_PRICE": data["price"],
+            "CALL_OI": data["call_oi"],
+            "PUT_OI": data["put_oi"]
         }
