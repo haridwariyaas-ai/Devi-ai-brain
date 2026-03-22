@@ -11,7 +11,7 @@ def start_stream():
 
     access_token = os.getenv("UPSTOX_ACCESS_TOKEN")
 
-    u = Upstox(access_token, "YOUR_API_KEY")
+    u = Upstox(access_token, "ce332ba7-0561-4057-9972-8cbe1b859ce6")
 
     def on_tick(tick):
 
