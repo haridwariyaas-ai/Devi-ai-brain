@@ -6,48 +6,74 @@ def get_upstox_oi(price):
 
     token = os.getenv("UPSTOX_ACCESS_TOKEN")
 
-    with open("data/instruments.json") as f:
-        data = json.load(f)
+    if not token:
+        print("❌ TOKEN MISSING")
+        return {"call_oi": 0, "put_oi": 0}
 
-    contracts = data.get("data", [])
+    try:
+        # 🔥 LOAD INSTRUMENT FILE
+        with open("data/instruments.json") as f:
+            data = json.load(f)
 
-    atm = round(price / 50) * 50
+        contracts = data.get("data", [])
 
-    ce_key = None
-    pe_key = None
+        if not contracts:
+            print("❌ EMPTY CONTRACTS")
+            return {"call_oi": 0, "put_oi": 0}
 
-    for c in contracts:
+        # 🔥 ATM CALCULATION
+        atm = round(price / 50) * 50
 
-        if c["strike_price"] == atm:
+        # 🔥 FIND NEAREST STRIKE
+        closest = min(contracts, key=lambda x: abs(x["strike_price"] - atm))
+        atm = closest["strike_price"]
 
-            if c["option_type"] == "CE":
-                ce_key = c["instrument_key"]
+        print("🎯 ATM:", atm)
 
-            elif c["option_type"] == "PE":
-                pe_key = c["instrument_key"]
+        ce_key = None
+        pe_key = None
 
-    print("🎯 AUTO KEYS:", ce_key, pe_key)
+        for c in contracts:
 
-    headers = {
-        "Authorization": f"Bearer {token}"
-    }
+            if c.get("strike_price") == atm:
 
-    url = "https://api.upstox.com/v2/market-quote/quotes"
+                if c.get("instrument_type") == "CE":
+                    ce_key = c.get("instrument_key")
 
-    params = {
-        "instrument_key": f"{ce_key},{pe_key}"
-    }
+                elif c.get("instrument_type") == "PE":
+                    pe_key = c.get("instrument_key")
 
-    r = requests.get(url, headers=headers, params=params)
+        print("🎯 AUTO KEYS:", ce_key, pe_key)
 
-    q = r.json()
+        if not ce_key or not pe_key:
+            print("❌ KEYS NOT FOUND")
+            return {"call_oi": 0, "put_oi": 0}
 
-    call_oi = q["data"][ce_key].get("oi", 0)
-    put_oi = q["data"][pe_key].get("oi", 0)
+        # 🔥 FETCH OI
+        url = "https://api.upstox.com/v2/market-quote/quotes"
 
-    print("✅ OI:", call_oi, put_oi)
+        headers = {
+            "Authorization": f"Bearer {token}"
+        }
 
-    return {
-        "call_oi": call_oi,
-        "put_oi": put_oi
-    }
+        params = {
+            "instrument_key": f"{ce_key},{pe_key}"
+        }
+
+        r = requests.get(url, headers=headers, params=params)
+        q = r.json()
+
+        call_oi = q["data"][ce_key].get("oi", 0)
+        put_oi = q["data"][pe_key].get("oi", 0)
+
+        print("✅ FINAL OI:", call_oi, put_oi)
+
+        return {
+            "call_oi": call_oi,
+            "put_oi": put_oi
+        }
+
+    except Exception as e:
+        print("❌ ERROR:", e)
+
+    return {"call_oi": 0, "put_oi": 0}
