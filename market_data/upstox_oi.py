@@ -1,18 +1,36 @@
+import json
 import requests
 import os
 
-def get_upstox_oi():
+def get_upstox_oi(price):
 
     token = os.getenv("UPSTOX_ACCESS_TOKEN")
 
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Accept": "application/json"
-    }
+    with open("data/instruments.json") as f:
+        data = json.load(f)
 
-    # 🔥 MANUAL VERIFIED KEYS (example)
-    ce_key = "NSE_FO|123456"
-    pe_key = "NSE_FO|654321"
+    contracts = data.get("data", [])
+
+    atm = round(price / 50) * 50
+
+    ce_key = None
+    pe_key = None
+
+    for c in contracts:
+
+        if c["strike_price"] == atm:
+
+            if c["option_type"] == "CE":
+                ce_key = c["instrument_key"]
+
+            elif c["option_type"] == "PE":
+                pe_key = c["instrument_key"]
+
+    print("🎯 AUTO KEYS:", ce_key, pe_key)
+
+    headers = {
+        "Authorization": f"Bearer {token}"
+    }
 
     url = "https://api.upstox.com/v2/market-quote/quotes"
 
@@ -20,19 +38,16 @@ def get_upstox_oi():
         "instrument_key": f"{ce_key},{pe_key}"
     }
 
-    try:
-        r = requests.get(url, headers=headers, params=params)
-        data = r.json()
+    r = requests.get(url, headers=headers, params=params)
 
-        call_oi = data["data"][ce_key].get("oi", 0)
-        put_oi = data["data"][pe_key].get("oi", 0)
+    q = r.json()
 
-        print("✅ OI:", call_oi, put_oi)
+    call_oi = q["data"][ce_key].get("oi", 0)
+    put_oi = q["data"][pe_key].get("oi", 0)
 
-        return {
-            "call_oi": call_oi,
-            "put_oi": put_oi
-        }
+    print("✅ OI:", call_oi, put_oi)
 
-    except:
-        return {"call_oi": 0, "put_oi": 0}
+    return {
+        "call_oi": call_oi,
+        "put_oi": put_oi
+    }
