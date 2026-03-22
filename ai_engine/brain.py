@@ -1,11 +1,11 @@
-from market_data.live_stream import start_stream
+from market_data.upstox_real import get_upstox_price
 
 class DeviBrain:
 
     def run_cycle(self):
 
-        data = start_stream()
+        price = get_upstox_price()
 
         return {
-            "NIFTY_PRICE": data["price"]
+            "NIFTY_PRICE": price
         }
