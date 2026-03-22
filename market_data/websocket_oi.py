@@ -4,12 +4,12 @@ import threading
 import time
 import os
 
-# 🔥 GLOBAL DATA STORE
 live_data = {
     "price": None,
     "call_oi": None,
     "put_oi": None
 }
+
 
 def on_message(ws, message):
 
@@ -18,41 +18,41 @@ def on_message(ws, message):
     print("📡 RAW:", data)
 
     try:
-        feeds = data.get("feeds", {})
+        feeds = data.get("data", {})
 
         for key, val in feeds.items():
 
-            # price
+            # 🔥 PRICE
             if "ltp" in val:
-                live_data["price"] = val["ltp"]
+                live_data["price"] = val.get("ltp")
 
-            # OI
+            # 🔥 OI
             if "oi" in val:
                 if "CE" in key:
-                    live_data["call_oi"] = val["oi"]
+                    live_data["call_oi"] = val.get("oi")
                 elif "PE" in key:
-                    live_data["put_oi"] = val["oi"]
+                    live_data["put_oi"] = val.get("oi")
 
     except Exception as e:
-        print("❌ PARSE ERROR:", e)
+        print("❌ ERROR:", e)
 
 
 def on_open(ws):
 
-    print("🔥 WebSocket Connected")
+    print("🔥 CONNECTED")
 
-    # 🔥 SUBSCRIBE (temporary example keys)
-    data = {
-        "guid": "test",
+    sub_data = {
+        "guid": "abc",
         "method": "sub",
         "data": {
+            "mode": "full",
             "instrumentKeys": [
                 "NSE_INDEX|Nifty 50"
             ]
         }
     }
 
-    ws.send(json.dumps(data))
+    ws.send(json.dumps(sub_data))
 
 
 def start_websocket():
@@ -63,14 +63,18 @@ def start_websocket():
 
     ws = websocket.WebSocketApp(
         url,
-        on_message=on_message,
-        on_open=on_open
+        on_open=on_open,
+        on_message=on_message
     )
 
     thread = threading.Thread(target=ws.run_forever)
     thread.daemon = True
     thread.start()
 
-    time.sleep(2)  # wait for data
+    # 🔥 WAIT LOOP (IMPORTANT FIX)
+    for _ in range(10):
+        if live_data["price"] is not None:
+            break
+        time.sleep(1)
 
     return live_data
