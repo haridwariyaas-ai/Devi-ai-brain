@@ -1,17 +1,11 @@
-from market_data.websocket_oi import start_websocket
+from market_data.live_stream import start_stream
 
 class DeviBrain:
 
     def run_cycle(self):
 
-        print("🔥 STARTING WEBSOCKET")
-
-        data = start_websocket()
-
-        print("🔥 LIVE DATA:", data)
+        data = start_stream()
 
         return {
-            "NIFTY_PRICE": data["price"],
-            "CALL_OI": data["call_oi"],
-            "PUT_OI": data["put_oi"]
+            "NIFTY_PRICE": data["price"]
         }
