@@ -6,12 +6,7 @@ def get_upstox_oi(price):
 
     token = os.getenv("UPSTOX_ACCESS_TOKEN")
 
-    if not token:
-        print("❌ TOKEN MISSING")
-        return {"call_oi": 0, "put_oi": 0}
-
     try:
-        # 🔥 LOAD INSTRUMENT FILE
         with open("data/instruments.json") as f:
             data = json.load(f)
 
@@ -21,12 +16,11 @@ def get_upstox_oi(price):
             print("❌ EMPTY CONTRACTS")
             return {"call_oi": 0, "put_oi": 0}
 
-        # 🔥 ATM CALCULATION
         atm = round(price / 50) * 50
 
         # 🔥 FIND NEAREST STRIKE
-        closest = min(contracts, key=lambda x: abs(x["strike_price"] - atm))
-        atm = closest["strike_price"]
+        closest = min(contracts, key=lambda x: abs(x.get("strike_price", 0) - atm))
+        atm = closest.get("strike_price")
 
         print("🎯 ATM:", atm)
 
@@ -49,7 +43,7 @@ def get_upstox_oi(price):
             print("❌ KEYS NOT FOUND")
             return {"call_oi": 0, "put_oi": 0}
 
-        # 🔥 FETCH OI
+        # 🔥 SAFE API CALL
         url = "https://api.upstox.com/v2/market-quote/quotes"
 
         headers = {
@@ -63,8 +57,12 @@ def get_upstox_oi(price):
         r = requests.get(url, headers=headers, params=params)
         q = r.json()
 
-        call_oi = q["data"][ce_key].get("oi", 0)
-        put_oi = q["data"][pe_key].get("oi", 0)
+        if "data" not in q:
+            print("❌ INVALID RESPONSE:", q)
+            return {"call_oi": 0, "put_oi": 0}
+
+        call_oi = q["data"].get(ce_key, {}).get("oi", 0)
+        put_oi = q["data"].get(pe_key, {}).get("oi", 0)
 
         print("✅ FINAL OI:", call_oi, put_oi)
 
