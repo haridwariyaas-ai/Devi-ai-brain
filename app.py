@@ -1,14 +1,14 @@
 import streamlit as st
 from ai_engine.brain import DeviBrain
 
+st.set_page_config(page_title="Devi AI", layout="centered")
+
 st.title("🧠 Devi AI Brain")
+
+st.success("App started successfully ✅")
 
 brain = DeviBrain()
 
-# ✅ SAFE STARTUP (no auto execution)
-st.write("App started successfully ✅")
-
-# ✅ Run only when button clicked
 if st.button("Run Devi"):
 
     try:
