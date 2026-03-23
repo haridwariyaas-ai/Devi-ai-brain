@@ -19,6 +19,13 @@ def get_upstox_price():
 
     data = r.json()
 
+    print("📡 PRICE API RESPONSE:", data)
+
+    # 🔥 SAFE CHECK
+    if "data" not in data:
+        print("❌ TOKEN ISSUE / API FAIL")
+        return 0
+
     price = data["data"]["NSE_INDEX:Nifty 50"]["last_price"]
 
     print("🔥 PRICE:", price)
