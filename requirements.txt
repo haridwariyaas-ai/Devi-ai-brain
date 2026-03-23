@@ -1,5 +1,3 @@
-streamlit
-requests
-scikit-learn
 pandas
-websocket-client
+requests
+streamlit
