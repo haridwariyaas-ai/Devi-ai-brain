@@ -1,10 +1,7 @@
 import streamlit as st
-
-st.set_page_config(page_title="Devi AI Brain")
-
-st.title("🤖 Devi AI Trading Brain")
-
 from ai_engine.brain import DeviBrain
+
+st.title("Devi AI Brain 🧠")
 
 brain = DeviBrain()
 
