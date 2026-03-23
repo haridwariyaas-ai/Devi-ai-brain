@@ -1,7 +1,22 @@
 import requests
 import os
+from datetime import datetime, timedelta
 
 
+# ✅ NEXT THURSDAY FINDER (NIFTY expiry)
+def get_next_expiry():
+    today = datetime.now()
+    days_ahead = 3 - today.weekday()  # Thursday = 3
+
+    if days_ahead <= 0:
+        days_ahead += 7
+
+    expiry = today + timedelta(days=days_ahead)
+
+    return expiry.strftime("%d%b").upper()  # e.g. 28MAR
+
+
+# ✅ MAIN OI FUNCTION
 def get_upstox_oi(price):
 
     token = os.getenv("UPSTOX_ACCESS_TOKEN")
@@ -10,16 +25,16 @@ def get_upstox_oi(price):
         print("OI ERROR: Token missing")
         return {"CE_OI": 0, "PE_OI": 0, "strike": 0}
 
-    # ✅ ATM strike (same as your logic)
     try:
         strike = round(price / 50) * 50
     except:
         return {"CE_OI": 0, "PE_OI": 0, "strike": 0}
 
-    # ⚠️ IMPORTANT: expiry missing tha → isliye OI nahi aa raha tha
-    # फिलहाल safe fallback symbol use कर रहे हैं (weekly expiry format)
-    ce_symbol = f"NSE_FO|NIFTY{strike}CE"
-    pe_symbol = f"NSE_FO|NIFTY{strike}PE"
+    expiry = get_next_expiry()
+
+    # ✅ CORRECT SYMBOL FORMAT
+    ce_symbol = f"NSE_FO|NIFTY{expiry}{strike}CE"
+    pe_symbol = f"NSE_FO|NIFTY{expiry}{strike}PE"
 
     url = "https://api.upstox.com/v2/market-quote/quotes"
 
@@ -38,11 +53,11 @@ def get_upstox_oi(price):
         print("OI API ERROR:", e)
         return {"CE_OI": 0, "PE_OI": 0, "strike": strike}
 
-    # 🔍 DEBUG (important)
-    print("OI RAW RESPONSE:", data)
+    # 🔍 DEBUG
+    print("OI RAW:", data)
 
     if "data" not in data:
-        print("OI INVALID RESPONSE:", data)
+        print("OI INVALID:", data)
         return {"CE_OI": 0, "PE_OI": 0, "strike": strike}
 
     ce_data = data["data"].get(ce_symbol, {})
@@ -51,5 +66,6 @@ def get_upstox_oi(price):
     return {
         "CE_OI": ce_data.get("oi", 0),
         "PE_OI": pe_data.get("oi", 0),
-        "strike": strike
+        "strike": strike,
+        "expiry": expiry
     }
