@@ -1,107 +1,38 @@
-import pandas as pd
-import requests
-import os
-
 def get_upstox_oi(price):
+    import requests
+    import os
 
-    try:
-        # 🔥 LOAD CSV
-        df = pd.read_csv("data/NSE_FO.csv")
+    token = os.getenv("UPSTOX_ACCESS_TOKEN")
 
-        print("📊 CSV LOADED:", len(df))
+    strike = round(price / 50) * 50  # ATM strike
 
-        # 🔥 ONLY NIFTY OPTIONS (FIXED)
-        df = df[df["tradingsymbol"].str.contains("NIFTY", na=False)]
+    ce_key = f"NSE_FO|NIFTY{strike}CE"
+    pe_key = f"NSE_FO|NIFTY{strike}PE"
 
-        print("📊 AFTER NIFTY FILTER:", len(df))
+    url = "https://api.upstox.com/v2/market-quote/quotes"
 
-        # 🔥 CONVERT EXPIRY
-        df["expiry"] = pd.to_datetime(df["expiry"], errors="coerce")
+    headers = {
+        "Authorization": f"Bearer {token}"
+    }
 
-        # 🔥 REMOVE INVALID
-        df = df.dropna(subset=["expiry"])
+    params = {
+        "instrument_key": f"{ce_key},{pe_key}"
+    }
 
-        # 🔥 ONLY FUTURE EXPIRY
-        today = pd.Timestamp.today()
-        df = df[df["expiry"] >= today]
+    r = requests.get(url, headers=headers, params=params)
 
-        print("📊 FUTURE CONTRACTS:", len(df))
+    print("OI RAW:", r.text)
 
-        if df.empty:
-            print("❌ NO FUTURE DATA")
-            return {"call_oi": 0, "put_oi": 0}
+    data = r.json()
 
-        # 🔥 NEAREST EXPIRY
-        nearest_expiry = df["expiry"].min()
-        df = df[df["expiry"] == nearest_expiry]
+    if "data" not in data:
+        raise Exception(f"OI API Failed: {data}")
 
-        print("📅 EXPIRY:", nearest_expiry)
+    ce_oi = data["data"][ce_key]["oi"]
+    pe_oi = data["data"][pe_key]["oi"]
 
-        # 🔥 ATM STRIKE
-        atm = round(price / 50) * 50
-
-        # 🔥 ENSURE STRIKE COLUMN EXISTS
-        if "strike" not in df.columns:
-            print("❌ STRIKE COLUMN MISSING")
-            return {"call_oi": 0, "put_oi": 0}
-
-        # 🔥 CLOSEST STRIKE
-        df["diff"] = abs(df["strike"] - atm)
-        atm_strike = df.sort_values("diff").iloc[0]["strike"]
-
-        df = df[df["strike"] == atm_strike]
-
-        print("🎯 ATM STRIKE:", atm_strike)
-
-        # 🔥 CE / PE
-        ce_df = df[df["option_type"] == "CE"]
-        pe_df = df[df["option_type"] == "PE"]
-
-        if ce_df.empty or pe_df.empty:
-            print("❌ CE/PE NOT FOUND")
-            return {"call_oi": 0, "put_oi": 0}
-
-        ce_row = ce_df.iloc[0]
-        pe_row = pe_df.iloc[0]
-
-        ce_key = ce_row["instrument_key"]
-        pe_key = pe_row["instrument_key"]
-
-        print("🎯 KEYS:", ce_key, pe_key)
-
-        # 🔥 FETCH OI
-        token = os.getenv("UPSTOX_ACCESS_TOKEN")
-
-        headers = {
-            "Authorization": f"Bearer {token}"
-        }
-
-        url = "https://api.upstox.com/v2/market-quote/quotes"
-
-        params = {
-            "instrument_key": f"{ce_key},{pe_key}"
-        }
-
-        r = requests.get(url, headers=headers, params=params)
-        data = r.json()
-
-        print("📡 API RESPONSE:", data)
-
-        if "data" not in data:
-            print("❌ INVALID API RESPONSE")
-            return {"call_oi": 0, "put_oi": 0}
-
-        call_oi = data["data"].get(ce_key, {}).get("oi", 0)
-        put_oi = data["data"].get(pe_key, {}).get("oi", 0)
-
-        print("✅ FINAL OI:", call_oi, put_oi)
-
-        return {
-            "call_oi": call_oi,
-            "put_oi": put_oi
-        }
-
-    except Exception as e:
-        print("❌ ERROR:", e)
-
-    return {"call_oi": 0, "put_oi": 0}
+    return {
+        "CE_OI": ce_oi,
+        "PE_OI": pe_oi,
+        "strike": strike
+    }
