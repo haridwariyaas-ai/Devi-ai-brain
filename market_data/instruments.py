@@ -1,39 +1,43 @@
-import requests
-import os
-import json
+import pandas as pd
 
-def download_instruments():
+def load_instruments():
+    df = pd.read_csv("complete.csv")
 
-    token = os.getenv("UPSTOX_ACCESS_TOKEN")
+    nifty_df = df[
+        (df["exchange"] == "NSE_FO") &
+        (df["instrument_type"] == "OPTIDX") &
+        (df["tradingsymbol"].str.contains("NIFTY"))
+    ].copy()
 
-    headers = {
-        "Authorization": f"Bearer {token}"
-    }
+    nifty_df["expiry"] = pd.to_datetime(nifty_df["expiry"])
 
-    # 🔥 CORRECT ENDPOINT
-    url = "https://api.upstox.com/v2/instruments"
+    return nifty_df
 
-    params = {
-        "segment": "NSE_FO"
-    }
 
-    r = requests.get(url, headers=headers, params=params)
+def get_nearest_expiry_df(nifty_df):
+    today = pd.Timestamp.today().normalize()
 
-    data = r.json()
+    future_exp = nifty_df[nifty_df["expiry"] >= today]
+    nearest_expiry = future_exp["expiry"].min()
 
-    if "data" not in data:
-        print("❌ FAILED TO FETCH INSTRUMENTS:", data)
-        return
+    return nifty_df[nifty_df["expiry"] == nearest_expiry]
 
-    # 🔥 FILTER ONLY NIFTY OPTIONS
-    filtered = []
 
-    for item in data["data"]:
+def get_atm_options(nifty_exp_df, nifty_ltp):
 
-        if "NIFTY" in item.get("trading_symbol", ""):
-            filtered.append(item)
+    nifty_exp_df["strike_diff"] = abs(nifty_exp_df["strike"] - nifty_ltp)
 
-    with open("data/instruments.json", "w") as f:
-        json.dump({"data": filtered}, f)
+    atm_strike = nifty_exp_df.sort_values("strike_diff").iloc[0]["strike"]
 
-    print("✅ Instruments saved:", len(filtered))
+    nifty_exp_df["option_type"] = nifty_exp_df["tradingsymbol"].str[-2:]
+
+    ce_df = nifty_exp_df[nifty_exp_df["option_type"] == "CE"]
+    pe_df = nifty_exp_df[nifty_exp_df["option_type"] == "PE"]
+
+    ce_df["strike_diff"] = abs(ce_df["strike"] - nifty_ltp)
+    pe_df["strike_diff"] = abs(pe_df["strike"] - nifty_ltp)
+
+    atm_ce = ce_df.sort_values("strike_diff").iloc[0]
+    atm_pe = pe_df.sort_values("strike_diff").iloc[0]
+
+    return atm_ce["instrument_key"], atm_pe["instrument_key"], atm_strike
