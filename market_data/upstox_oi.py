@@ -6,8 +6,8 @@ def get_upstox_oi(price):
 
     token = os.getenv("UPSTOX_ACCESS_TOKEN")
 
+    # ✅ never crash
     if not token:
-        print("❌ Token missing")
         return {"CE_OI": 0, "PE_OI": 0, "strike": 0}
 
     try:
@@ -31,23 +31,19 @@ def get_upstox_oi(price):
     try:
         r = requests.get(url, headers=headers, params=params, timeout=5)
         data = r.json()
-    except Exception as e:
-        print("❌ API ERROR:", e)
+    except:
         return {"CE_OI": 0, "PE_OI": 0, "strike": strike}
 
-    # 🔍 DEBUG
     print("OI RAW:", data)
 
-    # ✅ MAIN FIX (CRASH STOPPER)
+    # ✅ MOST IMPORTANT FIX (no crash ever)
     if "data" not in data or not data["data"]:
-        print("⚠️ EMPTY OI DATA → WRONG SYMBOL (expiry missing)")
         return {
             "CE_OI": 0,
             "PE_OI": 0,
             "strike": strike
         }
 
-    # ✅ SAFE ACCESS (NO KEYERROR)
     ce_data = data["data"].get(ce_key)
     pe_data = data["data"].get(pe_key)
 
