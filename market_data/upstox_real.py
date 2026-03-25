@@ -26,12 +26,13 @@ def get_nifty_price():
 
         print("📡 PRICE API:", data)
 
-        # 🔴 Handle invalid token
         if data.get("status") != "success":
-            print("❌ API FAILED:", data)
             return 0
 
-        return data["data"]["NSE_INDEX|Nifty 50"]["last_price"]
+        # 🔥 FIX: dynamic key
+        key = list(data["data"].keys())[0]
+
+        return data["data"][key]["last_price"]
 
     except Exception as e:
         print("❌ ERROR:", e)
