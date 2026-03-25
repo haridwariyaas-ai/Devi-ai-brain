@@ -10,10 +10,8 @@ def get_oi_data(price):
         token = os.getenv("UPSTOX_ACCESS_TOKEN")
 
         if not token:
-            print("❌ Token missing")
             return {"call_oi": 0, "put_oi": 0}
 
-        # ATM strike
         atm = round(price / 50) * 50
 
         df = pd.read_csv("data/NSE_FO.csv")
@@ -37,20 +35,16 @@ def get_oi_data(price):
             "instrument_key": f"{ce_key},{pe_key}"
         }
 
-        response = requests.get(url, headers=headers, params=params)
-        data = response.json()
+        res = requests.get(url, headers=headers, params=params)
+        data = res.json()
 
         if "data" not in data:
             return {"call_oi": 0, "put_oi": 0}
 
-        call_oi = data["data"].get(ce_key, {}).get("oi", 0)
-        put_oi = data["data"].get(pe_key, {}).get("oi", 0)
-
         return {
-            "call_oi": call_oi,
-            "put_oi": put_oi
+            "call_oi": data["data"].get(ce_key, {}).get("oi", 0),
+            "put_oi": data["data"].get(pe_key, {}).get("oi", 0),
         }
 
-    except Exception as e:
-        print("Error:", e)
+    except:
         return {"call_oi": 0, "put_oi": 0}
