@@ -23,12 +23,9 @@ def get_nifty_price():
         data = response.json()
 
         if "data" not in data:
-            print("❌ API failed")
             return 0
 
-        price = data["data"]["NSE_INDEX|Nifty 50"]["last_price"]
-        return price
+        return data["data"]["NSE_INDEX|Nifty 50"]["last_price"]
 
-    except Exception as e:
-        print("Error:", e)
+    except:
         return 0
