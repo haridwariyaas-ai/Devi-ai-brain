@@ -2,9 +2,10 @@ import streamlit as st
 from market_data.upstox_real import get_nifty_price
 from market_data.upstox_oi import get_oi_data
 
-st.title("🧠 Devi AI Brain (Clean Version)")
+st.set_page_config(page_title="Devi AI Brain")
 
-# Fetch price
+st.title("🧠 Devi AI Brain (Stable)")
+
 price = get_nifty_price()
 
 if price == 0:
@@ -12,11 +13,6 @@ if price == 0:
 else:
     st.success(f"NIFTY LTP: {price}")
 
-# Fetch OI
 oi_data = get_oi_data(price)
 
-if oi_data["call_oi"] == 0 and oi_data["put_oi"] == 0:
-    st.error("❌ OI data failed")
-else:
-    st.write("📊 OI Data")
-    st.write(oi_data)
+st.write("📊 OI Data:", oi_data)
