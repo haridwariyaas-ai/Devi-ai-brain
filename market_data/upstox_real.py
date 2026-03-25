@@ -8,7 +8,7 @@ def get_nifty_price():
         token = os.getenv("UPSTOX_ACCESS_TOKEN")
 
         if not token:
-            print("❌ Token missing")
+            print("❌ TOKEN MISSING")
             return 0
 
         url = "https://api.upstox.com/v2/market-quote/ltp"
@@ -21,13 +21,14 @@ def get_nifty_price():
             "instrument_key": "NSE_INDEX|Nifty 50"
         }
 
-        response = requests.get(url, headers=headers, params=params)
-        data = response.json()
+        res = requests.get(url, headers=headers, params=params)
+        data = res.json()
 
         print("📡 PRICE API:", data)
 
+        # 🔴 Handle invalid token
         if data.get("status") != "success":
-            print("❌ API failed")
+            print("❌ API FAILED:", data)
             return 0
 
         return data["data"]["NSE_INDEX|Nifty 50"]["last_price"]
