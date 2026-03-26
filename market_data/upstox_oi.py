@@ -7,11 +7,9 @@ def get_oi_data(price):
     try:
         token = os.getenv("UPSTOX_ACCESS_TOKEN")
 
-        if not token or price == 0:
+        if not token:
+            print("❌ TOKEN MISSING")
             return {"call_oi": 0, "put_oi": 0}
-
-        atm = round(price / 50) * 50
-        print("🎯 ATM:", atm)
 
         url = "https://api.upstox.com/v2/option/chain"
 
@@ -29,19 +27,30 @@ def get_oi_data(price):
         print("📡 OPTION CHAIN:", data)
 
         if data.get("status") != "success":
+            print("❌ API FAILED")
             return {"call_oi": 0, "put_oi": 0}
 
-        options = data["data"]
+        options = data.get("data", [])
 
-        # 🔥 Find ATM strike
-        for opt in options:
-            if int(opt["strike_price"]) == atm:
-                return {
-                    "call_oi": opt["call_options"]["oi"],
-                    "put_oi": opt["put_options"]["oi"]
-                }
+        if not options:
+            print("❌ NO OPTION DATA")
+            return {"call_oi": 0, "put_oi": 0}
 
-        return {"call_oi": 0, "put_oi": 0}
+        atm = round(price / 50) * 50
+        print("🎯 ATM:", atm)
+
+        # 🔥 Find nearest strike
+        closest = min(options, key=lambda x: abs(int(x["strike_price"]) - atm))
+
+        call_oi = closest.get("call_options", {}).get("oi", 0)
+        put_oi = closest.get("put_options", {}).get("oi", 0)
+
+        print("📊 FINAL OI:", call_oi, put_oi)
+
+        return {
+            "call_oi": call_oi,
+            "put_oi": put_oi
+        }
 
     except Exception as e:
         print("❌ ERROR:", e)
