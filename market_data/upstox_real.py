@@ -13,13 +13,13 @@ def get_nifty_price():
         url = "https://api.upstox.com/v2/market-quote/ltp"
         params = {"instrument_key": "NSE_INDEX|Nifty 50"}
 
-        r = requests.get(url, headers=headers, params=params).json()
+        res = requests.get(url, headers=headers, params=params).json()
 
-        if r.get("status") != "success":
+        if res.get("status") != "success":
             return 0
 
-        key = list(r["data"].keys())[0]
-        return r["data"][key]["last_price"]
+        key = list(res["data"].keys())[0]
+        return res["data"][key]["last_price"]
 
     except:
         return 0
