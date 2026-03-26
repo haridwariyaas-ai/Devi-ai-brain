@@ -1,14 +1,13 @@
 import requests
 import os
 
-print("🔥 upstox_real.py loaded")
+print("🔥 upstox_real loaded")
 
 def get_nifty_price():
     try:
         token = os.getenv("UPSTOX_ACCESS_TOKEN")
 
         if not token:
-            print("❌ TOKEN MISSING")
             return 0
 
         url = "https://api.upstox.com/v2/market-quote/ltp"
@@ -24,16 +23,11 @@ def get_nifty_price():
         res = requests.get(url, headers=headers, params=params)
         data = res.json()
 
-        print("📡 PRICE API:", data)
-
         if data.get("status") != "success":
             return 0
 
-        # 🔥 FIX: dynamic key
         key = list(data["data"].keys())[0]
-
         return data["data"][key]["last_price"]
 
-    except Exception as e:
-        print("❌ ERROR:", e)
+    except:
         return 0
