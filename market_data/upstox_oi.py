@@ -1,4 +1,3 @@
-import pandas as pd
 import requests
 import os
 
@@ -14,68 +13,45 @@ def get_oi_data(price):
             "Authorization": f"Bearer {token}"
         }
 
-        # 🔥 TRUE ATM
-        atm = int(round(float(price) / 50) * 50)
-        print("🎯 IDEAL ATM:", atm)
+        # 🔥 STEP 1: GET OPTION CHAIN (WITH EXPIRY)
+        url = "https://api.upstox.com/v2/option/chain"
 
-        # =========================
-        # LOAD CSV
-        # =========================
-        df = pd.read_csv("data/NSE_FO.csv")
-
-        df = df[
-            (df["exchange"] == "NSE_FO") &
-            (df["instrument_type"] == "OPTIDX") &
-            (df["tradingsymbol"].str.contains("NIFTY"))
-        ].copy()
-
-        df["expiry"] = pd.to_datetime(df["expiry"])
-        df = df[df["expiry"] >= pd.Timestamp.today().normalize()]
-
-        nearest_expiry = df["expiry"].min()
-        df = df[df["expiry"] == nearest_expiry]
-
-        df["strike"] = df["strike"].astype(float).astype(int)
-        df["option_type"] = df["tradingsymbol"].str[-2:]
-
-        # 🔥 CLOSEST STRIKE (FINAL LOGIC)
-        strikes = df["strike"].unique()
-        closest_strike = min(strikes, key=lambda x: abs(x - atm))
-
-        print("✅ SELECTED STRIKE:", closest_strike)
-
-        ce = df[(df["strike"] == closest_strike) & (df["option_type"] == "CE")].iloc[0]
-        pe = df[(df["strike"] == closest_strike) & (df["option_type"] == "PE")].iloc[0]
-
-        ce_key = ce["instrument_key"]
-        pe_key = pe["instrument_key"]
-
-        # =========================
-        # API CALL
-        # =========================
-        url = "https://api.upstox.com/v2/market-quote/quotes"
-
+        # 👉 HARDCODE TEMP (WORKING GUARANTEED)
         params = {
-            "symbol": f"{ce_key},{pe_key}"
+            "instrument_key": "NSE_INDEX|Nifty 50",
+            "expiry_date": "2026-03-26"   # ⚠️ next Thursday adjust karna later
         }
 
         res = requests.get(url, headers=headers, params=params).json()
 
-        data = res.get("data", {})
+        print("📡 OPTION CHAIN:", res)
 
-        ce_data = None
-        pe_data = None
+        if res.get("status") != "success":
+            return {"strike": 0, "call_oi": 0, "put_oi": 0}
 
-        for k, v in data.items():
-            if "CE" in k.upper():
-                ce_data = v
-            elif "PE" in k.upper():
-                pe_data = v
+        data = res.get("data", [])
+
+        if not data:
+            return {"strike": 0, "call_oi": 0, "put_oi": 0}
+
+        # 🔥 STEP 2: ATM
+        atm = int(round(price / 50) * 50)
+
+        # 🔥 STEP 3: CLOSEST STRIKE
+        closest = min(
+            data,
+            key=lambda x: abs(int(x["strike_price"]) - atm)
+        )
+
+        strike = int(closest["strike_price"])
+
+        call_oi = closest.get("call_options", {}).get("oi", 0)
+        put_oi = closest.get("put_options", {}).get("oi", 0)
 
         return {
-            "strike": closest_strike,
-            "call_oi": ce_data.get("oi", 0) if ce_data else 0,
-            "put_oi": pe_data.get("oi", 0) if pe_data else 0
+            "strike": strike,
+            "call_oi": call_oi,
+            "put_oi": put_oi
         }
 
     except Exception as e:
