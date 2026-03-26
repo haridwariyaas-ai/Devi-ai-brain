@@ -14,11 +14,9 @@ def get_oi_data(price):
             "Authorization": f"Bearer {token}"
         }
 
-        # =========================
-        # 🔥 FIXED ATM (FORCE INT)
-        # =========================
+        # 🔥 TRUE ATM
         atm = int(round(float(price) / 50) * 50)
-        print("🎯 ATM CALCULATED:", atm)
+        print("🎯 IDEAL ATM:", atm)
 
         # =========================
         # LOAD CSV
@@ -37,37 +35,20 @@ def get_oi_data(price):
         nearest_expiry = df["expiry"].min()
         df = df[df["expiry"] == nearest_expiry]
 
-        # 🔥 FIX: STRIKE TYPE NORMALIZATION
         df["strike"] = df["strike"].astype(float).astype(int)
-
         df["option_type"] = df["tradingsymbol"].str[-2:]
 
-        # =========================
-        # EXACT MATCH
-        # =========================
-        ce = df[(df["strike"] == atm) & (df["option_type"] == "CE")]
-        pe = df[(df["strike"] == atm) & (df["option_type"] == "PE")]
+        # 🔥 CLOSEST STRIKE (FINAL LOGIC)
+        strikes = df["strike"].unique()
+        closest_strike = min(strikes, key=lambda x: abs(x - atm))
 
-        print("📊 CE MATCH:", len(ce))
-        print("📊 PE MATCH:", len(pe))
+        print("✅ SELECTED STRIKE:", closest_strike)
 
-        # =========================
-        # FALLBACK
-        # =========================
-        if ce.empty or pe.empty:
-            print("⚠️ FALLBACK TRIGGERED")
+        ce = df[(df["strike"] == closest_strike) & (df["option_type"] == "CE")].iloc[0]
+        pe = df[(df["strike"] == closest_strike) & (df["option_type"] == "PE")].iloc[0]
 
-            df["diff"] = abs(df["strike"] - atm)
-            atm = int(df.sort_values("diff").iloc[0]["strike"])
-
-            ce = df[(df["strike"] == atm) & (df["option_type"] == "CE")]
-            pe = df[(df["strike"] == atm) & (df["option_type"] == "PE")]
-
-        ce_row = ce.iloc[0]
-        pe_row = pe.iloc[0]
-
-        ce_key = ce_row["instrument_key"]
-        pe_key = pe_row["instrument_key"]
+        ce_key = ce["instrument_key"]
+        pe_key = pe["instrument_key"]
 
         # =========================
         # API CALL
@@ -92,7 +73,7 @@ def get_oi_data(price):
                 pe_data = v
 
         return {
-            "strike": atm,
+            "strike": closest_strike,
             "call_oi": ce_data.get("oi", 0) if ce_data else 0,
             "put_oi": pe_data.get("oi", 0) if pe_data else 0
         }
