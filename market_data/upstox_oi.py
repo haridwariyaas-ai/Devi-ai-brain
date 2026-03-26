@@ -2,21 +2,20 @@ import pandas as pd
 import requests
 import os
 
-print("🔥 FINAL OI FIX LOADED")
+print("🔥 FINAL OI WITH STRIKE")
 
 def get_oi_data(price):
     try:
         token = os.getenv("UPSTOX_ACCESS_TOKEN")
 
         if not token or price == 0:
-            return {"call_oi": 0, "put_oi": 0}
+            return {"call_oi": 0, "put_oi": 0, "strike": 0}
 
         headers = {
             "Accept": "application/json",
             "Authorization": f"Bearer {token}"
         }
 
-        # 🔥 LOAD CSV
         df = pd.read_csv("data/NSE_FO.csv")
 
         df = df[
@@ -31,7 +30,7 @@ def get_oi_data(price):
         nearest_expiry = df["expiry"].min()
         df = df[df["expiry"] == nearest_expiry]
 
-        # 🔥 ATM
+        # 🔥 ATM STRIKE
         df["diff"] = abs(df["strike"] - price)
         atm = df.sort_values("diff").iloc[0]["strike"]
 
@@ -43,7 +42,6 @@ def get_oi_data(price):
         ce_key = ce["instrument_key"]
         pe_key = pe["instrument_key"]
 
-        # 🔥 API CALL
         url = "https://api.upstox.com/v2/market-quote/quotes"
 
         params = {
@@ -52,30 +50,23 @@ def get_oi_data(price):
 
         res = requests.get(url, headers=headers, params=params).json()
 
-        print("📡 FINAL RESPONSE:", res)
-
         data = res.get("data", {})
 
-        # ✅ DIRECT ACCESS (NO MATCHING BUG)
         ce_data = None
         pe_data = None
 
         for key, value in data.items():
-            sym = key.upper()
-
-            if "CE" in sym:
+            if "CE" in key.upper():
                 ce_data = value
-            elif "PE" in sym:
+            elif "PE" in key.upper():
                 pe_data = value
 
-        if not ce_data or not pe_data:
-            return {"call_oi": 0, "put_oi": 0}
-
         return {
-            "call_oi": ce_data.get("oi", 0),
-            "put_oi": pe_data.get("oi", 0)
+            "strike": atm,  # ✅ NEW ADD
+            "call_oi": ce_data.get("oi", 0) if ce_data else 0,
+            "put_oi": pe_data.get("oi", 0) if pe_data else 0
         }
 
     except Exception as e:
         print("❌ ERROR:", e)
-        return {"call_oi": 0, "put_oi": 0}
+        return {"call_oi": 0, "put_oi": 0, "strike": 0}
