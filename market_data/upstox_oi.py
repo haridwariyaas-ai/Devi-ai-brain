@@ -6,10 +6,9 @@ print("🔥 upstox_oi.py loaded")
 
 def get_oi_data(price):
     try:
-        print("🚀 OI FUNCTION STARTED")
+        print("🚀 OI START")
 
         if price == 0:
-            print("❌ Price is 0")
             return {"call_oi": 0, "put_oi": 0}
 
         token = os.getenv("UPSTOX_ACCESS_TOKEN")
@@ -21,31 +20,35 @@ def get_oi_data(price):
         atm = round(price / 50) * 50
         print("🎯 ATM:", atm)
 
-        # 🔥 Load CSV
         df = pd.read_csv("data/NSE_FO.csv")
-        print("📊 CSV LOADED:", len(df))
+        print("📊 CSV COLUMNS:", df.columns)
 
-        # 🔥 Filter NIFTY
-        df = df[df["name"] == "NIFTY"]
+        # 🔥 AUTO COLUMN DETECT
+        strike_col = "strike" if "strike" in df.columns else "strike_price"
+        type_col = "option_type" if "option_type" in df.columns else "instrument_type"
+        name_col = "name" if "name" in df.columns else "tradingsymbol"
 
-        # 🔥 Convert expiry
-        df["expiry"] = pd.to_datetime(df["expiry"])
+        # 🔥 FILTER NIFTY (loose match)
+        df = df[df[name_col].astype(str).str.contains("NIFTY", case=False)]
 
-        # 🔥 Nearest expiry
-        nearest_expiry = df["expiry"].min()
-        print("📅 EXPIRY:", nearest_expiry)
+        # 🔥 OPTION TYPE FIX
+        df[type_col] = df[type_col].astype(str)
 
-        df = df[df["expiry"] == nearest_expiry]
+        ce_df = df[
+            (df[strike_col] == atm) &
+            (df[type_col].str.contains("CE"))
+        ]
 
-        # 🔥 ATM filter
-        ce_df = df[(df["strike"] == atm) & (df["option_type"] == "CE")]
-        pe_df = df[(df["strike"] == atm) & (df["option_type"] == "PE")]
+        pe_df = df[
+            (df[strike_col] == atm) &
+            (df[type_col].str.contains("PE"))
+        ]
 
         print("📊 CE FOUND:", len(ce_df))
         print("📊 PE FOUND:", len(pe_df))
 
         if ce_df.empty or pe_df.empty:
-            print("❌ NO STRIKE FOUND")
+            print("❌ NO MATCH FOUND")
             return {"call_oi": 0, "put_oi": 0}
 
         ce_key = ce_df.iloc[0]["instrument_key"]
@@ -67,23 +70,17 @@ def get_oi_data(price):
         res = requests.get(url, headers=headers, params=params)
         data = res.json()
 
-        print("📡 OI API RESPONSE:", data)
+        print("📡 OI API:", data)
 
         if data.get("status") != "success":
-            print("❌ API FAILED")
             return {"call_oi": 0, "put_oi": 0}
 
         call_data = data["data"].get(ce_key, {})
         put_data = data["data"].get(pe_key, {})
 
-        call_oi = call_data.get("oi")
-        put_oi = put_data.get("oi")
-
-        print("📊 FINAL OI:", call_oi, put_oi)
-
         return {
-            "call_oi": call_oi or 0,
-            "put_oi": put_oi or 0
+            "call_oi": call_data.get("oi") or 0,
+            "put_oi": put_data.get("oi") or 0
         }
 
     except Exception as e:
