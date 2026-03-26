@@ -1,8 +1,8 @@
+import pandas as pd
 import requests
 import os
-from datetime import datetime, timedelta
 
-print("🔥 upstox_oi FINAL FIXED loaded")
+print("🔥 FINAL OI FIX LOADED")
 
 def get_oi_data(price):
     try:
@@ -16,51 +16,64 @@ def get_oi_data(price):
             "Authorization": f"Bearer {token}"
         }
 
-        # 🔥 STEP 1: guess nearest expiry (Thursday logic)
-        today = datetime.now()
+        # 🔥 LOAD CSV
+        df = pd.read_csv("data/NSE_FO.csv")
 
-        # next Thursday
-        days_ahead = 3 - today.weekday()  # Thursday = 3
-        if days_ahead <= 0:
-            days_ahead += 7
+        df = df[
+            (df["exchange"] == "NSE_FO") &
+            (df["instrument_type"] == "OPTIDX") &
+            (df["tradingsymbol"].str.contains("NIFTY"))
+        ].copy()
 
-        expiry = today + timedelta(days=days_ahead)
-        expiry_str = expiry.strftime("%Y-%m-%d")
+        df["expiry"] = pd.to_datetime(df["expiry"])
+        df = df[df["expiry"] >= pd.Timestamp.today().normalize()]
 
-        print("📅 EXPIRY USED:", expiry_str)
-
-        # 🔥 STEP 2: OPTION CHAIN API
-        url = "https://api.upstox.com/v2/option/chain"
-
-        params = {
-            "instrument_key": "NSE_INDEX|Nifty 50",
-            "expiry_date": expiry_str   # ✅ FIX
-        }
-
-        res = requests.get(url, headers=headers, params=params)
-        data = res.json()
-
-        print("📡 OPTION CHAIN:", data)
-
-        if data.get("status") != "success":
-            return {"call_oi": 0, "put_oi": 0}
-
-        options = data.get("data", [])
-
-        if not options:
-            return {"call_oi": 0, "put_oi": 0}
+        nearest_expiry = df["expiry"].min()
+        df = df[df["expiry"] == nearest_expiry]
 
         # 🔥 ATM
-        atm = round(price / 50) * 50
+        df["diff"] = abs(df["strike"] - price)
+        atm = df.sort_values("diff").iloc[0]["strike"]
 
-        closest = min(
-            options,
-            key=lambda x: abs(int(x["strike_price"]) - atm)
-        )
+        df["option_type"] = df["tradingsymbol"].str[-2:]
+
+        ce = df[(df["strike"] == atm) & (df["option_type"] == "CE")].iloc[0]
+        pe = df[(df["strike"] == atm) & (df["option_type"] == "PE")].iloc[0]
+
+        ce_key = ce["instrument_key"]
+        pe_key = pe["instrument_key"]
+
+        # 🔥 API CALL
+        url = "https://api.upstox.com/v2/market-quote/quotes"
+
+        params = {
+            "symbol": f"{ce_key},{pe_key}"
+        }
+
+        res = requests.get(url, headers=headers, params=params).json()
+
+        print("📡 FINAL RESPONSE:", res)
+
+        data = res.get("data", {})
+
+        # ✅ DIRECT ACCESS (NO MATCHING BUG)
+        ce_data = None
+        pe_data = None
+
+        for key, value in data.items():
+            sym = key.upper()
+
+            if "CE" in sym:
+                ce_data = value
+            elif "PE" in sym:
+                pe_data = value
+
+        if not ce_data or not pe_data:
+            return {"call_oi": 0, "put_oi": 0}
 
         return {
-            "call_oi": closest.get("call_options", {}).get("oi", 0),
-            "put_oi": closest.get("put_options", {}).get("oi", 0)
+            "call_oi": ce_data.get("oi", 0),
+            "put_oi": pe_data.get("oi", 0)
         }
 
     except Exception as e:
