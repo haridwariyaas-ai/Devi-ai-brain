@@ -15,9 +15,10 @@ def get_oi_data(price):
         }
 
         # =========================
-        # CORRECT ATM CALCULATION
+        # 🔥 FIXED ATM (FORCE INT)
         # =========================
-        atm = round(price / 50) * 50
+        atm = int(round(float(price) / 50) * 50)
+        print("🎯 ATM CALCULATED:", atm)
 
         # =========================
         # LOAD CSV
@@ -36,20 +37,28 @@ def get_oi_data(price):
         nearest_expiry = df["expiry"].min()
         df = df[df["expiry"] == nearest_expiry]
 
+        # 🔥 FIX: STRIKE TYPE NORMALIZATION
+        df["strike"] = df["strike"].astype(float).astype(int)
+
         df["option_type"] = df["tradingsymbol"].str[-2:]
 
         # =========================
-        # EXACT ATM MATCH
+        # EXACT MATCH
         # =========================
         ce = df[(df["strike"] == atm) & (df["option_type"] == "CE")]
         pe = df[(df["strike"] == atm) & (df["option_type"] == "PE")]
 
+        print("📊 CE MATCH:", len(ce))
+        print("📊 PE MATCH:", len(pe))
+
         # =========================
-        # FALLBACK IF NOT FOUND
+        # FALLBACK
         # =========================
         if ce.empty or pe.empty:
+            print("⚠️ FALLBACK TRIGGERED")
+
             df["diff"] = abs(df["strike"] - atm)
-            atm = df.sort_values("diff").iloc[0]["strike"]
+            atm = int(df.sort_values("diff").iloc[0]["strike"])
 
             ce = df[(df["strike"] == atm) & (df["option_type"] == "CE")]
             pe = df[(df["strike"] == atm) & (df["option_type"] == "PE")]
