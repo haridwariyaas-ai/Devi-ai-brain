@@ -1,46 +1,42 @@
 import requests
 import os
 
-print("🔥 upstox_oi FINAL loaded")
-
 def get_oi_data(price):
     try:
         token = os.getenv("UPSTOX_ACCESS_TOKEN")
 
-        if not token or price == 0:
+        if not token:
             return {"call_oi": 0, "put_oi": 0}
 
         headers = {
+            "Accept": "application/json",
             "Authorization": f"Bearer {token}"
         }
 
-        # 🔥 OPTION CHAIN API (CORRECT SOURCE OF OI)
         url = "https://api.upstox.com/v2/option/chain"
-
         params = {
             "instrument_key": "NSE_INDEX|Nifty 50"
         }
 
-        res = requests.get(url, headers=headers, params=params)
-        data = res.json()
+        res = requests.get(url, headers=headers, params=params).json()
 
-        print("📡 OPTION CHAIN:", data)
+        print("📡 OPTION CHAIN RAW:", res)
 
-        if data.get("status") != "success":
+        if res.get("status") != "success":
             return {"call_oi": 0, "put_oi": 0}
 
-        options = data.get("data", [])
+        data = res.get("data", [])
 
-        if not options:
+        if not data:
             return {"call_oi": 0, "put_oi": 0}
 
-        # 🔥 ATM STRIKE
+        # 🔥 ATM calculation
         atm = round(price / 50) * 50
 
-        # 🔥 CLOSEST STRIKE
+        # 🔥 nearest strike
         closest = min(
-            options,
-            key=lambda x: abs(int(x["strike_price"]) - atm)
+            data,
+            key=lambda x: abs(int(x.get("strike_price", 0)) - atm)
         )
 
         call_oi = closest.get("call_options", {}).get("oi", 0)
@@ -52,5 +48,5 @@ def get_oi_data(price):
         }
 
     except Exception as e:
-        print("❌ ERROR:", e)
+        print("ERROR:", e)
         return {"call_oi": 0, "put_oi": 0}
