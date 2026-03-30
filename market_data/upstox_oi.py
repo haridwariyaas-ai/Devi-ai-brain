@@ -1,6 +1,6 @@
+import pandas as pd
 import requests
 import os
-from datetime import datetime, timedelta
 
 def get_oi_data(price):
     try:
@@ -15,71 +15,64 @@ def get_oi_data(price):
         }
 
         # =========================
-        # 🔥 STEP 1: GET EXPIRY (NEXT THURSDAY)
+        # ✅ CORRECT ATM
         # =========================
-        today = datetime.now()
-        days_ahead = 3 - today.weekday()  # Thursday = 3
-        if days_ahead <= 0:
-            days_ahead += 7
-
-        expiry = today + timedelta(days=days_ahead)
-        expiry_str = expiry.strftime("%Y-%m-%d")
+        atm = int(round(float(price) / 50) * 50)
+        print("🎯 ATM:", atm)
 
         # =========================
-        # 🔥 STEP 2: OPTION CHAIN
+        # LOAD CSV
         # =========================
-        url = "https://api.upstox.com/v2/option/chain"
+        df = pd.read_csv("data/NSE_FO.csv")
+
+        df = df[
+            (df["exchange"] == "NSE_FO") &
+            (df["instrument_type"] == "OPTIDX") &
+            (df["tradingsymbol"].str.contains("NIFTY"))
+        ].copy()
+
+        df["expiry"] = pd.to_datetime(df["expiry"])
+        df = df[df["expiry"] >= pd.Timestamp.today().normalize()]
+
+        nearest_expiry = df["expiry"].min()
+        df = df[df["expiry"] == nearest_expiry]
+
+        # 🔥 FIX TYPE ISSUE
+        df["strike"] = df["strike"].astype(float).astype(int)
+
+        df["option_type"] = df["tradingsymbol"].str[-2:]
+
+        # =========================
+        # ✅ FORCE EXACT ATM (NO GUESS)
+        # =========================
+        exact_df = df[df["strike"] == atm]
+
+        if exact_df.empty:
+            print("❌ ATM NOT FOUND IN CSV")
+            return {"strike": atm, "call_oi": 0, "put_oi": 0}
+
+        ce_row = exact_df[exact_df["option_type"] == "CE"].iloc[0]
+        pe_row = exact_df[exact_df["option_type"] == "PE"].iloc[0]
+
+        ce_key = ce_row["instrument_key"]
+        pe_key = pe_row["instrument_key"]
+
+        print("🎯 USING STRIKE:", atm)
+
+        # =========================
+        # API CALL (WORKING ONE)
+        # =========================
+        url = "https://api.upstox.com/v2/market-quote/quotes"
 
         params = {
-            "instrument_key": "NSE_INDEX|Nifty 50",
-            "expiry_date": expiry_str
+            "symbol": f"{ce_key},{pe_key}"
         }
 
         res = requests.get(url, headers=headers, params=params).json()
 
-        print("📡 OPTION CHAIN:", res)
+        print("📡 RESPONSE:", res)
 
-        if res.get("status") != "success":
-            return {"strike": 0, "call_oi": 0, "put_oi": 0}
-
-        chain = res.get("data", [])
-
-        if not chain:
-            return {"strike": 0, "call_oi": 0, "put_oi": 0}
-
-        # =========================
-        # 🔥 STEP 3: ATM
-        # =========================
-        atm = int(round(price / 50) * 50)
-
-        closest = min(
-            chain,
-            key=lambda x: abs(int(x["strike_price"]) - atm)
-        )
-
-        strike = int(closest["strike_price"])
-
-        ce_symbol = closest["call_options"]["instrument_key"]
-        pe_symbol = closest["put_options"]["instrument_key"]
-
-        print("🎯 STRIKE:", strike)
-        print("CE:", ce_symbol)
-        print("PE:", pe_symbol)
-
-        # =========================
-        # 🔥 STEP 4: QUOTES (OI)
-        # =========================
-        quote_url = "https://api.upstox.com/v2/market-quote/quotes"
-
-        qparams = {
-            "symbol": f"{ce_symbol},{pe_symbol}"
-        }
-
-        qres = requests.get(quote_url, headers=headers, params=qparams).json()
-
-        print("📡 QUOTES:", qres)
-
-        data = qres.get("data", {})
+        data = res.get("data", {})
 
         ce_data = None
         pe_data = None
@@ -91,7 +84,7 @@ def get_oi_data(price):
                 pe_data = v
 
         return {
-            "strike": strike,
+            "strike": atm,
             "call_oi": ce_data.get("oi", 0) if ce_data else 0,
             "put_oi": pe_data.get("oi", 0) if pe_data else 0
         }
