@@ -1,3 +1,4 @@
+import pandas as pd
 import requests
 import os
 
@@ -13,38 +14,88 @@ def get_oi_data(price):
             "Authorization": f"Bearer {token}"
         }
 
-        # 🔥 ATM
-        atm = int(round(price / 50) * 50)
-
+        # =========================
+        # ✅ CORRECT ATM
+        # =========================
+        atm = int(round(float(price) / 50) * 50)
         print("🎯 ATM:", atm)
 
-        # 🔥 MANUAL SYMBOL BUILD (WORKING FORMAT)
-        # Example: NIFTY 23300 CE
-        ce_symbol = f"NSE_FO|NIFTY{atm}CE"
-        pe_symbol = f"NSE_FO|NIFTY{atm}PE"
+        # =========================
+        # LOAD CSV (SAME AS WORKING)
+        # =========================
+        df = pd.read_csv("data/NSE_FO.csv")
 
-        print("CE SYMBOL:", ce_symbol)
-        print("PE SYMBOL:", pe_symbol)
+        df = df[
+            (df["exchange"] == "NSE_FO") &
+            (df["instrument_type"] == "OPTIDX") &
+            (df["tradingsymbol"].str.contains("NIFTY"))
+        ].copy()
 
+        df["expiry"] = pd.to_datetime(df["expiry"])
+        df = df[df["expiry"] >= pd.Timestamp.today().normalize()]
+
+        nearest_expiry = df["expiry"].min()
+        df = df[df["expiry"] == nearest_expiry]
+
+        # 🔥 IMPORTANT FIX
+        df["strike"] = df["strike"].astype(float).astype(int)
+        df["option_type"] = df["tradingsymbol"].str[-2:]
+
+        # =========================
+        # ✅ EXACT ATM + SAFE FALLBACK
+        # =========================
+        ce = df[(df["strike"] == atm) & (df["option_type"] == "CE")]
+        pe = df[(df["strike"] == atm) & (df["option_type"] == "PE")]
+
+        if ce.empty or pe.empty:
+            print("⚠️ ATM not found, using closest")
+
+            df["diff"] = abs(df["strike"] - atm)
+            closest = df.sort_values("diff").iloc[0]["strike"]
+
+            ce = df[(df["strike"] == closest) & (df["option_type"] == "CE")]
+            pe = df[(df["strike"] == closest) & (df["option_type"] == "PE")]
+
+            atm = int(closest)
+
+        # =========================
+        # GET KEYS (IMPORTANT)
+        # =========================
+        ce_key = ce.iloc[0]["instrument_key"]
+        pe_key = pe.iloc[0]["instrument_key"]
+
+        print("🎯 FINAL STRIKE:", atm)
+        print("CE KEY:", ce_key)
+        print("PE KEY:", pe_key)
+
+        # =========================
+        # QUOTES API (WORKING PART)
+        # =========================
         url = "https://api.upstox.com/v2/market-quote/quotes"
 
         params = {
-            "symbol": f"{ce_symbol},{pe_symbol}"
+            "symbol": f"{ce_key},{pe_key}"
         }
 
         res = requests.get(url, headers=headers, params=params).json()
 
         print("📡 RESPONSE:", res)
 
+        if res.get("status") != "success":
+            return {"strike": atm, "call_oi": 0, "put_oi": 0}
+
         data = res.get("data", {})
 
+        # 🔥 SAFE MATCH (THIS WAS WORKING EARLIER)
         ce_data = None
         pe_data = None
 
         for k, v in data.items():
-            if "CE" in k.upper():
+            name = k.upper()
+
+            if "CE" in name:
                 ce_data = v
-            elif "PE" in k.upper():
+            elif "PE" in name:
                 pe_data = v
 
         return {
