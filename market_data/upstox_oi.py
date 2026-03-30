@@ -15,13 +15,13 @@ def get_oi_data(price):
         }
 
         # =========================
-        # ✅ CORRECT ATM
+        # ✅ STEP 1: CORRECT ATM
         # =========================
         atm = int(round(float(price) / 50) * 50)
-        print("🎯 ATM:", atm)
+        print("🎯 IDEAL ATM:", atm)
 
         # =========================
-        # LOAD CSV (SAME AS WORKING)
+        # LOAD CSV (WORKING SOURCE)
         # =========================
         df = pd.read_csv("data/NSE_FO.csv")
 
@@ -42,34 +42,38 @@ def get_oi_data(price):
         df["option_type"] = df["tradingsymbol"].str[-2:]
 
         # =========================
-        # ✅ EXACT ATM + SAFE FALLBACK
+        # ✅ STEP 2: EXACT ATM TRY
         # =========================
         ce = df[(df["strike"] == atm) & (df["option_type"] == "CE")]
         pe = df[(df["strike"] == atm) & (df["option_type"] == "PE")]
 
+        # =========================
+        # 🔁 STEP 3: FALLBACK (ONLY IF NEEDED)
+        # =========================
         if ce.empty or pe.empty:
-            print("⚠️ ATM not found, using closest")
+            print("⚠️ EXACT ATM NOT FOUND → USING CLOSEST")
 
             df["diff"] = abs(df["strike"] - atm)
-            closest = df.sort_values("diff").iloc[0]["strike"]
+            closest_strike = int(df.sort_values("diff").iloc[0]["strike"])
 
-            ce = df[(df["strike"] == closest) & (df["option_type"] == "CE")]
-            pe = df[(df["strike"] == closest) & (df["option_type"] == "PE")]
+            ce = df[(df["strike"] == closest_strike) & (df["option_type"] == "CE")]
+            pe = df[(df["strike"] == closest_strike) & (df["option_type"] == "PE")]
 
-            atm = int(closest)
+            atm = closest_strike
+
+        print("✅ FINAL STRIKE USED:", atm)
 
         # =========================
-        # GET KEYS (IMPORTANT)
+        # KEYS (WORKING PART)
         # =========================
         ce_key = ce.iloc[0]["instrument_key"]
         pe_key = pe.iloc[0]["instrument_key"]
 
-        print("🎯 FINAL STRIKE:", atm)
         print("CE KEY:", ce_key)
         print("PE KEY:", pe_key)
 
         # =========================
-        # QUOTES API (WORKING PART)
+        # 🔥 STEP 4: QUOTES API (WORKING OI)
         # =========================
         url = "https://api.upstox.com/v2/market-quote/quotes"
 
@@ -86,7 +90,6 @@ def get_oi_data(price):
 
         data = res.get("data", {})
 
-        # 🔥 SAFE MATCH (THIS WAS WORKING EARLIER)
         ce_data = None
         pe_data = None
 
