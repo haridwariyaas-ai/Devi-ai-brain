@@ -15,10 +15,10 @@ def get_oi_data(price):
         }
 
         # =========================
-        # ✅ STEP 1: ATM (CORRECT)
+        # ✅ ATM CALCULATION (FINAL)
         # =========================
         atm = int(round(float(price) / 50) * 50)
-        print("🎯 IDEAL ATM:", atm)
+        print("🎯 ATM:", atm)
 
         # =========================
         # LOAD CSV
@@ -41,81 +41,53 @@ def get_oi_data(price):
         df["option_type"] = df["tradingsymbol"].str[-2:]
 
         # =========================
-        # 🔥 STEP 2: FUNCTION TO FETCH OI
+        # 🔥 STEP 1: SINGLE STRIKE PICK
         # =========================
-        def fetch_oi(ce_key, pe_key):
-            url = "https://api.upstox.com/v2/market-quote/quotes"
+        df["diff"] = abs(df["strike"] - atm)
+        closest_strike = int(df.sort_values("diff").iloc[0]["strike"])
 
-            params = {
-                "symbol": f"{ce_key},{pe_key}"
-            }
-
-            res = requests.get(url, headers=headers, params=params).json()
-
-            data = res.get("data", {})
-
-            ce_data = None
-            pe_data = None
-
-            for k, v in data.items():
-                if "CE" in k.upper():
-                    ce_data = v
-                elif "PE" in k.upper():
-                    pe_data = v
-
-            call_oi = ce_data.get("oi", 0) if ce_data else 0
-            put_oi = pe_data.get("oi", 0) if pe_data else 0
-
-            return call_oi, put_oi
+        print("✅ FINAL STRIKE:", closest_strike)
 
         # =========================
-        # 🔥 STEP 3: TRY EXACT ATM
+        # 🔥 STEP 2: SAME STRIKE CE & PE
         # =========================
-        ce = df[(df["strike"] == atm) & (df["option_type"] == "CE")]
-        pe = df[(df["strike"] == atm) & (df["option_type"] == "PE")]
+        ce = df[(df["strike"] == closest_strike) & (df["option_type"] == "CE")].iloc[0]
+        pe = df[(df["strike"] == closest_strike) & (df["option_type"] == "PE")].iloc[0]
 
-        if not ce.empty and not pe.empty:
-            ce_key = ce.iloc[0]["instrument_key"]
-            pe_key = pe.iloc[0]["instrument_key"]
-
-            call_oi, put_oi = fetch_oi(ce_key, pe_key)
-
-            # ✅ अगर OI valid है → return
-            if call_oi > 0 or put_oi > 0:
-                print("✅ EXACT ATM WORKED")
-                return {
-                    "strike": atm,
-                    "call_oi": call_oi,
-                    "put_oi": put_oi
-                }
-
-        print("⚠️ EXACT ATM FAILED → TRYING NEAREST")
+        ce_key = ce["instrument_key"]
+        pe_key = pe["instrument_key"]
 
         # =========================
-        # 🔁 STEP 4: FALLBACK TO NEAREST (WORKING LOGIC)
+        # 🔥 STEP 3: OI FETCH
         # =========================
-        ce_all = df[df["option_type"] == "CE"].copy()
-        pe_all = df[df["option_type"] == "PE"].copy()
+        url = "https://api.upstox.com/v2/market-quote/quotes"
 
-        ce_all["diff"] = abs(ce_all["strike"] - atm)
-        pe_all["diff"] = abs(pe_all["strike"] - atm)
+        params = {
+            "symbol": f"{ce_key},{pe_key}"
+        }
 
-        atm_ce = ce_all.sort_values("diff").iloc[0]
-        atm_pe = pe_all.sort_values("diff").iloc[0]
+        res = requests.get(url, headers=headers, params=params).json()
 
-        strike = int(atm_ce["strike"])
+        print("📡 RESPONSE:", res)
 
-        ce_key = atm_ce["instrument_key"]
-        pe_key = atm_pe["instrument_key"]
+        if res.get("status") != "success":
+            return {"strike": closest_strike, "call_oi": 0, "put_oi": 0}
 
-        call_oi, put_oi = fetch_oi(ce_key, pe_key)
+        data = res.get("data", {})
 
-        print("✅ NEAREST STRIKE USED:", strike)
+        ce_data = None
+        pe_data = None
+
+        for k, v in data.items():
+            if "CE" in k.upper():
+                ce_data = v
+            elif "PE" in k.upper():
+                pe_data = v
 
         return {
-            "strike": strike,
-            "call_oi": call_oi,
-            "put_oi": put_oi
+            "strike": closest_strike,
+            "call_oi": ce_data.get("oi", 0) if ce_data else 0,
+            "put_oi": pe_data.get("oi", 0) if pe_data else 0
         }
 
     except Exception as e:
