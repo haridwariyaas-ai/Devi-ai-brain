@@ -15,7 +15,7 @@ def get_oi_data(price):
         }
 
         # =========================
-        # ✅ ATM CALCULATION (FINAL)
+        # ✅ ATM
         # =========================
         atm = int(round(float(price) / 50) * 50)
         print("🎯 ATM:", atm)
@@ -41,24 +41,34 @@ def get_oi_data(price):
         df["option_type"] = df["tradingsymbol"].str[-2:]
 
         # =========================
-        # 🔥 STEP 1: SINGLE STRIKE PICK
+        # 🔥 STEP 1: SPLIT CE / PE
         # =========================
-        df["diff"] = abs(df["strike"] - atm)
-        closest_strike = int(df.sort_values("diff").iloc[0]["strike"])
+        ce_df = df[df["option_type"] == "CE"].copy()
+        pe_df = df[df["option_type"] == "PE"].copy()
+
+        # =========================
+        # 🔥 STEP 2: COMMON STRIKES
+        # =========================
+        common_strikes = set(ce_df["strike"]).intersection(set(pe_df["strike"]))
+
+        if not common_strikes:
+            return {"strike": 0, "call_oi": 0, "put_oi": 0}
+
+        # =========================
+        # 🔥 STEP 3: NEAREST STRIKE (SAFE)
+        # =========================
+        closest_strike = min(common_strikes, key=lambda x: abs(x - atm))
 
         print("✅ FINAL STRIKE:", closest_strike)
 
-        # =========================
-        # 🔥 STEP 2: SAME STRIKE CE & PE
-        # =========================
-        ce = df[(df["strike"] == closest_strike) & (df["option_type"] == "CE")].iloc[0]
-        pe = df[(df["strike"] == closest_strike) & (df["option_type"] == "PE")].iloc[0]
+        ce = ce_df[ce_df["strike"] == closest_strike].iloc[0]
+        pe = pe_df[pe_df["strike"] == closest_strike].iloc[0]
 
         ce_key = ce["instrument_key"]
         pe_key = pe["instrument_key"]
 
         # =========================
-        # 🔥 STEP 3: OI FETCH
+        # 🔥 OI FETCH
         # =========================
         url = "https://api.upstox.com/v2/market-quote/quotes"
 
