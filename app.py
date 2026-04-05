@@ -17,10 +17,14 @@ with tab1:
 
 with tab2:
     st.subheader("Nifty 50 Live Chart")
-    # Updated URL to use 'NSE:NIFTY_50' which is more stable for the widget
-    chart_url = "https://s.tradingview.com/widgetembed/?symbol=NSE%3ANIFTY_50&interval=1&theme=dark"
-    # Fixed: Removed 'scrolling' to prevent TypeError
+    
+    # This specific URL uses the 'NIFTY' symbol from the 'NSE' exchange 
+    # formatted exactly as the TradingView Widget expects it.
+    chart_url = "https://s.tradingview.com/widgetembed/?symbol=NSE%3ANIFTY&interval=1&theme=dark"
+    
+    # We use a standard iframe to ensure it loads on Android Chrome
     st.iframe(chart_url, height=500)
+
 
 # 3. Live Update Loop
 while True:
