@@ -1,12 +1,14 @@
 import pandas as pd
 import requests
 import os
+from datetime import datetime
 
 def get_oi_data(price):
     try:
         token = os.getenv("UPSTOX_ACCESS_TOKEN")
 
-        if not token or price == 0:
+        if not token or price <= 0:
+            print("❌ Error: Token missing or invalid price.")
             return {"strike": 0, "call_oi": 0, "put_oi": 0}
 
         headers = {
@@ -14,92 +16,82 @@ def get_oi_data(price):
             "Authorization": f"Bearer {token}"
         }
 
-        # =========================
-        # ✅ ATM
-        # =========================
+        # 1. ✅ CORRECT STRIKE SELECTION (ATM)
+        # Nifty strikes are in multiples of 50
         atm = int(round(float(price) / 50) * 50)
-        print("🎯 ATM:", atm)
+        print(f"🎯 Spot: {price} | Selected ATM Strike: {atm}")
 
-        # =========================
-        # LOAD CSV
-        # =========================
+        # 2. LOAD AND FILTER CSV
+        # Make sure the path "data/NSE_FO.csv" is correct
+        if not os.path.exists("data/NSE_FO.csv"):
+            print("❌ Error: NSE_FO.csv file not found.")
+            return {"strike": atm, "call_oi": 0, "put_oi": 0}
+
         df = pd.read_csv("data/NSE_FO.csv")
 
+        # Filter for Nifty Options
         df = df[
             (df["exchange"] == "NSE_FO") &
             (df["instrument_type"] == "OPTIDX") &
-            (df["tradingsymbol"].str.contains("NIFTY"))
+            (df["root_instrument"] == "NIFTY") # Better than str.contains
         ].copy()
 
+        # Handle Expiry
         df["expiry"] = pd.to_datetime(df["expiry"])
-        df = df[df["expiry"] >= pd.Timestamp.today().normalize()]
+        today = pd.Timestamp.now().normalize()
+        df = df[df["expiry"] >= today]
 
+        # Get the nearest expiry date
         nearest_expiry = df["expiry"].min()
         df = df[df["expiry"] == nearest_expiry]
 
+        # 3. FIND EXACT INSTRUMENT KEYS
         df["strike"] = df["strike"].astype(float).astype(int)
-        df["option_type"] = df["tradingsymbol"].str[-2:]
+        
+        # Get CE and PE rows for the calculated ATM strike
+        strike_df = df[df["strike"] == atm]
 
-        # =========================
-        # 🔥 STEP 1: SPLIT CE / PE
-        # =========================
-        ce_df = df[df["option_type"] == "CE"].copy()
-        pe_df = df[df["option_type"] == "PE"].copy()
+        if strike_df.empty:
+            print(f"❌ ATM Strike {atm} not found in CSV for expiry {nearest_expiry.date()}")
+            return {"strike": atm, "call_oi": 0, "put_oi": 0}
 
-        # =========================
-        # 🔥 STEP 2: COMMON STRIKES
-        # =========================
-        common_strikes = set(ce_df["strike"]).intersection(set(pe_df["strike"]))
+        # Extract specific keys
+        try:
+            ce_key = strike_df[strike_df["option_type"] == "CE"]["instrument_key"].values[0]
+            pe_key = strike_df[strike_df["option_type"] == "PE"]["instrument_key"].values[0]
+        except IndexError:
+            print("❌ CE or PE key not found for this strike.")
+            return {"strike": atm, "call_oi": 0, "put_oi": 0}
 
-        if not common_strikes:
-            return {"strike": 0, "call_oi": 0, "put_oi": 0}
-
-        # =========================
-        # 🔥 STEP 3: NEAREST STRIKE (SAFE)
-        # =========================
-        closest_strike = min(common_strikes, key=lambda x: abs(x - atm))
-
-        print("✅ FINAL STRIKE:", closest_strike)
-
-        ce = ce_df[ce_df["strike"] == closest_strike].iloc[0]
-        pe = pe_df[pe_df["strike"] == closest_strike].iloc[0]
-
-        ce_key = ce["instrument_key"]
-        pe_key = pe["instrument_key"]
-
-        # =========================
-        # 🔥 OI FETCH
-        # =========================
+        # 4. API CALL
         url = "https://api.upstox.com/v2/market-quote/quotes"
+        params = {"symbol": f"{ce_key},{pe_key}"}
+        
+        response = requests.get(url, headers=headers, params=params)
+        res_data = response.json()
 
-        params = {
-            "symbol": f"{ce_key},{pe_key}"
-        }
+        if res_data.get("status") != "success":
+            print("📡 API Error:", res_data)
+            return {"strike": atm, "call_oi": 0, "put_oi": 0}
 
-        res = requests.get(url, headers=headers, params=params).json()
+        # 5. ✅ CORRECT OI EXTRACTION
+        # The keys in res_data['data'] are the instrument_keys themselves
+        data = res_data.get("data", {})
+        
+        ce_oi = data.get(ce_key, {}).get("oi", 0)
+        pe_oi = data.get(pe_key, {}).get("oi", 0)
 
-        print("📡 RESPONSE:", res)
-
-        if res.get("status") != "success":
-            return {"strike": closest_strike, "call_oi": 0, "put_oi": 0}
-
-        data = res.get("data", {})
-
-        ce_data = None
-        pe_data = None
-
-        for k, v in data.items():
-            if "CE" in k.upper():
-                ce_data = v
-            elif "PE" in k.upper():
-                pe_data = v
+        print(f"✅ Success! Strike: {atm} | CE OI: {ce_oi} | PE OI: {pe_oi}")
 
         return {
-            "strike": closest_strike,
-            "call_oi": ce_data.get("oi", 0) if ce_data else 0,
-            "put_oi": pe_data.get("oi", 0) if pe_data else 0
+            "strike": atm,
+            "call_oi": ce_oi,
+            "put_oi": pe_oi
         }
 
     except Exception as e:
-        print("ERROR:", e)
+        print("🚨 SYSTEM ERROR:", str(e))
         return {"strike": 0, "call_oi": 0, "put_oi": 0}
+
+# Example Usage:
+# print(get_oi_data(22432.50))
