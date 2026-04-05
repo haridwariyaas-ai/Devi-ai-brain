@@ -4,53 +4,30 @@ from market_data.upstox_real import get_nifty_price
 from market_data.upstox_oi import get_oi_data
 
 st.set_page_config(page_title="Devi AI Brain", layout="wide")
+st.title("🧠 Devi AI Brain: Live WebSocket Feed")
 
-st.title("🧠 Devi AI Brain Dashboard")
+# Placeholder for the live dashboard
+dashboard = st.empty()
 
-# 1. Create Tabs
-tab1, tab2 = st.tabs(["📊 OI Analysis", "📈 Live Charts"])
-
-with tab1:
-    # --- Your existing OI Logic ---
-    live_container = st.empty()
-
-with tab2:
-    st.subheader("Live Nifty Chart (TradingView)")
-    # Since Upstox doesn't have an embed, we use the standard TradingView Widget
-    # which shows the same Nifty data and is very fast.
-    chart_html = """
-    <div class="tradingview-widget-container" style="height:500px;">
-      <div id="tradingview_12345" style="height:500px;"></div>
-      <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
-      <script type="text/javascript">
-      new TradingView.widget({
-        "autosize": true,
-        "symbol": "NSE:NIFTY",
-        "interval": "1",
-        "timezone": "Asia/Kolkata",
-        "theme": "dark",
-        "style": "1",
-        "locale": "in",
-        "toolbar_bg": "#f1f3f6",
-        "enable_publishing": false,
-        "hide_top_toolbar": false,
-        "save_image": false,
-        "container_id": "tradingview_12345"
-      });
-      </script>
-    </div>
-    """
-    st.components.v1.html(chart_html, height=520)
-
-# --- Update Loop for Tab 1 ---
 while True:
+    # 1. Fetch current price from the WebSocket variable
     price = get_nifty_price()
-    oi = get_oi_data(price)
     
-    with live_container.container():
-        st.metric("Nifty LTP", price)
-        c1, c2 = st.columns(2)
-        c1.metric("Call OI", f"{oi['call_oi']:,}")
-        c2.metric("Put OI", f"{oi['put_oi']:,}")
-    
-    time.sleep(1)
+    # 2. Fetch OI (this uses the REST API)
+    oi = get_oi_data(price) if price > 0 else {"strike": 0, "call_oi": 0, "put_oi": 0}
+
+    with dashboard.container():
+        # Display Price
+        if price == 0:
+            st.info("⏳ Waiting for WebSocket connection... (Market must be OPEN)")
+        else:
+            st.metric("NIFTY 50 LTP", f"₹{price}", delta_color="normal")
+            
+            # Display OI
+            col1, col2, col3 = st.columns(3)
+            col1.metric("ATM Strike", oi['strike'])
+            col2.metric("Call OI", f"{oi['call_oi']:,}")
+            col3.metric("Put OI", f"{oi['put_oi']:,}")
+
+    # Sleep for high-frequency "Tick-by-Tick" updates
+    time.sleep(0.5)
