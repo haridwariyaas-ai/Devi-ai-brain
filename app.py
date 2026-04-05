@@ -1,67 +1,56 @@
 import streamlit as st
 import time
-from datetime import datetime
 from market_data.upstox_real import get_nifty_price
 from market_data.upstox_oi import get_oi_data
 
-# 1. Page Configuration
-st.set_page_config(page_title="Devi AI Brain", layout="centered")
+st.set_page_config(page_title="Devi AI Brain", layout="wide")
 
-st.title("🧠 Devi AI Brain")
+st.title("🧠 Devi AI Brain Dashboard")
 
-# 2. Create a placeholder for live updates
-# This prevents the app from creating a long list of updates
-live_dashboard = st.empty()
+# 1. Create Tabs
+tab1, tab2 = st.tabs(["📊 OI Analysis", "📈 Live Charts"])
 
-# 3. Live Update Loop
+with tab1:
+    # --- Your existing OI Logic ---
+    live_container = st.empty()
+
+with tab2:
+    st.subheader("Live Nifty Chart (TradingView)")
+    # Since Upstox doesn't have an embed, we use the standard TradingView Widget
+    # which shows the same Nifty data and is very fast.
+    chart_html = """
+    <div class="tradingview-widget-container" style="height:500px;">
+      <div id="tradingview_12345" style="height:500px;"></div>
+      <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+      <script type="text/javascript">
+      new TradingView.widget({
+        "autosize": true,
+        "symbol": "NSE:NIFTY",
+        "interval": "1",
+        "timezone": "Asia/Kolkata",
+        "theme": "dark",
+        "style": "1",
+        "locale": "in",
+        "toolbar_bg": "#f1f3f6",
+        "enable_publishing": false,
+        "hide_top_toolbar": false,
+        "save_image": false,
+        "container_id": "tradingview_12345"
+      });
+      </script>
+    </div>
+    """
+    st.components.v1.html(chart_html, height=520)
+
+# --- Update Loop for Tab 1 ---
 while True:
-    with live_dashboard.container():
-        # =========================
-        # PRICE FETCHING
-        # =========================
-        price = get_nifty_price()
-
-        if price == 0:
-            st.error("❌ Price fetch failed. Retrying...")
-        else:
-            st.success(f"📈 NIFTY LTP: {price}")
-
-            # =========================
-            # OI ANALYSIS
-            # =========================
-            # Ensure get_oi_data in upstox_oi.py returns call_oi and put_oi
-            oi = get_oi_data(price)
-
-            st.subheader("📊 Live OI Analysis")
-            
-            # Using columns for a cleaner "Tick-by-Tick" look
-            col1, col2, col3 = st.columns(3)
-            col1.metric("ATM Strike", oi.get('strike', 0))
-            col2.metric("Call OI", f"{oi.get('call_oi', 0):,}")
-            col3.metric("Put OI", f"{oi.get('put_oi', 0):,}")
-
-            # =========================
-            # SIGNAL LOGIC
-            # =========================
-            call_oi = oi.get('call_oi', 0)
-            put_oi = oi.get('put_oi', 0)
-
-            if put_oi > call_oi and put_oi > 0:
-                st.success("🚀 SIGNAL: Bullish (Put OI > Call OI)")
-            elif call_oi > put_oi and call_oi > 0:
-                st.warning("🔻 SIGNAL: Bearish (Call OI > Put OI)")
-            else:
-                st.info("⚖️ SIGNAL: Neutral / Waiting for Data")
-            
-            # Weekend/Holiday Check (April 5, 2026 is a Sunday)
-            if datetime.now().strftime("%A") in ["Saturday", "Sunday"]:
-                st.warning("⚠️ Market is Closed. Showing last available or zero data.")
-
-        # =========================
-        # FOOTER
-        # =========================
-        st.markdown("---")
-        st.caption(f"⚡ Last Tick: {datetime.now().strftime('%H:%M:%S')} | Powered by Devi AI Brain")
-
-    # 4. Refresh rate (1 second for tick-by-tick)
+    price = get_nifty_price()
+    oi = get_oi_data(price)
+    
+    with live_container.container():
+        st.metric("Nifty LTP", price)
+        c1, c2 = st.columns(2)
+        c1.metric("Call OI", f"{oi['call_oi']:,}")
+        c2.metric("Put OI", f"{oi['put_oi']:,}")
+    
     time.sleep(1)
