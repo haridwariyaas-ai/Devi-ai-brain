@@ -20,17 +20,14 @@ def start_websocket():
     streamer = upstox_client.MarketDataStreamerV3(api_client)
     streamer.on("message", on_message)
     
-    # Connect first
+    # Connect and wait for handshake to complete
     streamer.connect()
-    
-    # Wait 2 seconds for the handshake to finish before subscribing
-    # This fixes the 'NoneType' object has no attribute 'send' error in your logs
-    time.sleep(2) 
+    time.sleep(3) 
     
     try:
         streamer.subscribe(["NSE_INDEX|Nifty 50"], "ltpc")
     except Exception as e:
-        print(f"Subscription failed: {e}")
+        print(f"WS Subscription Error: {e}")
 
 def get_nifty_price():
     global latest_nifty_price
