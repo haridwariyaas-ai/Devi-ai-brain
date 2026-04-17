@@ -20,14 +20,17 @@ def start_websocket():
     streamer = upstox_client.MarketDataStreamerV3(api_client)
     streamer.on("message", on_message)
     
-    # Connect and wait for handshake to complete
-    streamer.connect()
-    time.sleep(3) 
+    # 429 Fix: Wait before connecting to avoid hitting limits during app restarts
+    time.sleep(5) 
     
     try:
+        streamer.connect()
+        time.sleep(2) # Wait for handshake
         streamer.subscribe(["NSE_INDEX|Nifty 50"], "ltpc")
     except Exception as e:
-        print(f"WS Subscription Error: {e}")
+        print(f"WS Error: {e}")
+        # If blocked, wait 60 seconds before thread ends
+        time.sleep(60)
 
 def get_nifty_price():
     global latest_nifty_price
