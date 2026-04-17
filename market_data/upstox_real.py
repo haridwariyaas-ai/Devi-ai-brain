@@ -23,18 +23,25 @@ def on_message(feed):
 
 def start_websocket():
     token = os.getenv("UPSTOX_ACCESS_TOKEN")
-    api_client = upstox_client.ApiClient(upstox_client.Configuration(access_token=token))
+    
+    # Correct way to configure the Upstox API Client
+    configuration = upstox_client.Configuration()
+    configuration.access_token = token
+    api_client = upstox_client.ApiClient(configuration)
+    
     streamer = upstox_client.MarketDataStreamerV3(api_client)
     streamer.on("message", on_message)
     
-    streamer.connect()
-    time.sleep(2) # Wait for handshake
+    # 429 Prevention: Small wait before connecting
+    time.sleep(2)
     
     try:
+        streamer.connect()
+        time.sleep(3) # Wait for handshake to finish
         # Subscribe to multiple index keys
         streamer.subscribe(["NSE_INDEX|Nifty 50", "NSE_INDEX|Nifty Bank", "BSE_INDEX|SENSEX"], "ltpc")
     except Exception as e:
-        print(f"Subscription Error: {e}")
+        print(f"WS Error: {e}")
 
 def get_all_indices():
     if not any(t.name == "UpstoxWS" for t in threading.enumerate()):
