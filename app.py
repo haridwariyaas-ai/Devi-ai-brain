@@ -8,9 +8,9 @@ st.set_page_config(page_title="Devi AI Brain", layout="wide")
 indices = get_all_indices()
 t1, t2, t3 = st.columns(3)
 
-# If data is 0, show a loading status
+# Use placeholders to avoid flickering on mobile
 if indices['NIFTY'] == 0:
-    st.info("🔄 Connecting to Live Stream... Please wait.")
+    st.warning("🔄 Establishing Secure Upstox Connection... (Please wait 30 seconds)")
 else:
     t1.metric("NIFTY 50", f"₹{indices['NIFTY']:,}")
     t2.metric("BANK NIFTY", f"₹{indices['BANK_NIFTY']:,}")
@@ -18,8 +18,7 @@ else:
 
 st.markdown("---")
 st.title("🧠 Devi AI Brain Dashboard")
-# ... (rest of your app tabs)
 
-# Auto-refresh to see live updates
-time.sleep(1)
+# Slow down the refresh to save data and avoid API limits
+time.sleep(2)
 st.rerun()
