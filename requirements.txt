@@ -1,5 +1,4 @@
-upstox-python-sdk
-protobuf
+streamlit
 pandas
 requests
-streamlit
+ta
