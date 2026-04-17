@@ -1,33 +1,43 @@
+# app.py
+
 import streamlit as st
-from market_data.upstox_real import get_all_indices
+from data.upstox_data import get_market_quotes
+from scanners.equity_scanner import scan_equity
+from logic.reasoning import build_reason
 
-st.set_page_config(page_title="Devi AI Brain", layout="wide")
+st.set_page_config(page_title="Devi Intraday Scanner", layout="wide")
 
-st.title("🧠 Devi AI Brain")
+st.title("🔥 Devi Intraday Stock Scanner (Real-Time NSE)")
 
-# --- TOP TICKER ---
-# Fetch data once per page load/refresh
-with st.spinner("Fetching Market Data..."):
-    prices = get_all_indices()
+# Input
+symbols_input = st.text_input(
+    "Enter NSE Stocks (comma separated)",
+    "RELIANCE,TCS,HDFCBANK,INFY,ICICIBANK"
+)
 
-col1, col2, col3 = st.columns(3)
+if st.button("Run Scanner"):
 
-if prices["NIFTY"] > 0:
-    col1.metric("NIFTY 50", f"₹{prices['NIFTY']:,}")
-    col2.metric("BANK NIFTY", f"₹{prices['BANK_NIFTY']:,}")
-    col3.metric("SENSEX", f"₹{prices['SENSEX']:,}")
-else:
-    st.error("⚠️ Unable to fetch live data. Please check your Access Token.")
+    try:
+        symbols = [s.strip().upper() for s in symbols_input.split(",")]
 
-st.markdown("---")
+        # Fetch data
+        df = get_market_quotes(symbols)
 
-# Manual refresh button (Safer for your API limits)
-if st.button("🔄 Refresh Prices"):
-    st.rerun()
+        # Run scanner
+        results = scan_equity(df)
 
-# --- CONTENT TABS ---
-tab1, tab2 = st.tabs(["📈 Market Pulse", "🧘 Wellness"])
+        if results:
+            st.success(f"{len(results)} Opportunities Found 🚀")
 
-with tab1:
-    st.write("Current Market Status: **Closed** (Showing Friday Close)")
-    # Add your trading logic here
+            for stock in results:
+                st.subheader(stock["symbol"])
+                st.write(f"Price: ₹{stock['ltp']}")
+                st.write("Why Picked:")
+                st.info(build_reason(stock["signals"]))
+                st.markdown("---")
+
+        else:
+            st.warning("No strong intraday setups found")
+
+    except Exception as e:
+        st.error(f"Error: {str(e)}")
