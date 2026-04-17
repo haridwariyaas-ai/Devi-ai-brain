@@ -13,15 +13,14 @@ with tab1:
     dashboard = st.empty()
 
 with tab2:
-    st.subheader("Nifty 50 Technical Chart")
-    # This widget version is highly compatible with mobile Chrome and Nifty 50
+    st.subheader("Nifty 50 Trend")
+    # This widget is more reliable for restricted indices like Nifty
     chart_html = """
-    <div class="tradingview-widget-container">
-      <iframe src="https://s.tradingview.com/embed-widget/technical-analysis/?symbol=NSE%3ANIFTY&interval=1m&theme=dark&locale=in" 
-              width="100%" height="450" frameborder="0" allowtransparency="true" scrolling="no"></iframe>
-    </div>
+    <iframe src="https://s.tradingview.com/embed-widget/mini-symbol-overview/?symbol=NSE%3ANIFTY&width=100%25&height=400&locale=in&dateRange=1d&colorTheme=dark&trendLineColor=rgba(41, 98, 255, 1)&underLineColor=rgba(41, 98, 255, 0.3)&isTransparent=true&autosize=true" 
+    width="100%" height="400" frameborder="0" allowtransparency="true" scrolling="no"></iframe>
     """
-    st.components.v1.html(chart_html, height=500)
+    st.components.v1.html(chart_html, height=420)
+
 
 while True:
     try:
