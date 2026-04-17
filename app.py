@@ -1,24 +1,33 @@
 import streamlit as st
-import time
 from market_data.upstox_real import get_all_indices
 
 st.set_page_config(page_title="Devi AI Brain", layout="wide")
 
-# --- TICKER BAR ---
-indices = get_all_indices()
-t1, t2, t3 = st.columns(3)
+st.title("🧠 Devi AI Brain")
 
-# Use placeholders to avoid flickering on mobile
-if indices['NIFTY'] == 0:
-    st.warning("🔄 Establishing Secure Upstox Connection... (Please wait 30 seconds)")
+# --- TOP TICKER ---
+# Fetch data once per page load/refresh
+with st.spinner("Fetching Market Data..."):
+    prices = get_all_indices()
+
+col1, col2, col3 = st.columns(3)
+
+if prices["NIFTY"] > 0:
+    col1.metric("NIFTY 50", f"₹{prices['NIFTY']:,}")
+    col2.metric("BANK NIFTY", f"₹{prices['BANK_NIFTY']:,}")
+    col3.metric("SENSEX", f"₹{prices['SENSEX']:,}")
 else:
-    t1.metric("NIFTY 50", f"₹{indices['NIFTY']:,}")
-    t2.metric("BANK NIFTY", f"₹{indices['BANK_NIFTY']:,}")
-    t3.metric("SENSEX", f"₹{indices['SENSEX']:,}")
+    st.error("⚠️ Unable to fetch live data. Please check your Access Token.")
 
 st.markdown("---")
-st.title("🧠 Devi AI Brain Dashboard")
 
-# Slow down the refresh to save data and avoid API limits
-time.sleep(2)
-st.rerun()
+# Manual refresh button (Safer for your API limits)
+if st.button("🔄 Refresh Prices"):
+    st.rerun()
+
+# --- CONTENT TABS ---
+tab1, tab2 = st.tabs(["📈 Market Pulse", "🧘 Wellness"])
+
+with tab1:
+    st.write("Current Market Status: **Closed** (Showing Friday Close)")
+    # Add your trading logic here
