@@ -9,7 +9,6 @@ BASE_URL = "https://api.upstox.com/v2/market-quote/quotes"
 def get_market_quotes(symbols):
     """
     Fetch live NSE equity quotes from Upstox
-    symbols: list like ["RELIANCE", "TCS"]
     """
 
     headers = {
@@ -43,6 +42,4 @@ def get_market_quotes(symbols):
             "prev_close": val["ohlc"]["close"]
         })
 
-    df = pd.DataFrame(rows)
-
-    return df
+    return pd.DataFrame(rows)
