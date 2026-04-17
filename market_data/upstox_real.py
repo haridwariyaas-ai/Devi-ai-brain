@@ -3,43 +3,40 @@ import threading
 import os
 import time
 
-latest_nifty_price = 0.0
-# Track connection attempts to prevent rapid retries
-connection_attempts = 0
+# Dictionary to store all live prices
+live_prices = {
+    "NIFTY": 0.0,
+    "BANK_NIFTY": 0.0,
+    "SENSEX": 0.0
+}
 
 def on_message(feed):
-    global latest_nifty_price
-    nifty_feed = feed.get("NSE_INDEX|Nifty 50")
-    if nifty_feed and hasattr(nifty_feed, 'ltpc'):
-        latest_nifty_price = nifty_feed.ltpc.ltp
+    global live_prices
+    # Upstox keys for indices
+    nifty = feed.get("NSE_INDEX|Nifty 50")
+    bank_nifty = feed.get("NSE_INDEX|Nifty Bank")
+    sensex = feed.get("BSE_INDEX|SENSEX")
+    
+    if nifty: live_prices["NIFTY"] = nifty.ltpc.ltp
+    if bank_nifty: live_prices["BANK_NIFTY"] = bank_nifty.ltpc.ltp
+    if sensex: live_prices["SENSEX"] = sensex.ltpc.ltp
 
 def start_websocket():
-    global connection_attempts
     token = os.getenv("UPSTOX_ACCESS_TOKEN")
-    
-    # Wait longer with each attempt (max 60s) to clear 429 errors
-    wait_time = min(connection_attempts * 10, 60)
-    time.sleep(wait_time)
-    
-    configuration = upstox_client.Configuration()
-    configuration.access_token = token
-    api_client = upstox_client.ApiClient(configuration)
-    
+    api_client = upstox_client.ApiClient(upstox_client.Configuration(access_token=token))
     streamer = upstox_client.MarketDataStreamerV3(api_client)
     streamer.on("message", on_message)
     
+    streamer.connect()
+    time.sleep(2) # Wait for handshake
+    
     try:
-        connection_attempts += 1
-        streamer.connect()
-        time.sleep(5) # Crucial wait for handshake to finish
-        streamer.subscribe(["NSE_INDEX|Nifty 50"], "ltpc")
+        # Subscribe to multiple index keys
+        streamer.subscribe(["NSE_INDEX|Nifty 50", "NSE_INDEX|Nifty Bank", "BSE_INDEX|SENSEX"], "ltpc")
     except Exception as e:
-        print(f"WS Connection Failed: {e}")
-        # Reset if successful, but here we just wait before allowing a retry
-        time.sleep(30)
+        print(f"Subscription Error: {e}")
 
-def get_nifty_price():
-    global latest_nifty_price
+def get_all_indices():
     if not any(t.name == "UpstoxWS" for t in threading.enumerate()):
         threading.Thread(target=start_websocket, name="UpstoxWS", daemon=True).start()
-    return latest_nifty_price
+    return live_prices
