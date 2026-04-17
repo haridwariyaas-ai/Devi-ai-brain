@@ -12,7 +12,6 @@ live_prices = {
 
 def on_message(feed):
     global live_prices
-    # Upstox keys for indices
     nifty = feed.get("NSE_INDEX|Nifty 50")
     bank_nifty = feed.get("NSE_INDEX|Nifty Bank")
     sensex = feed.get("BSE_INDEX|SENSEX")
@@ -24,24 +23,24 @@ def on_message(feed):
 def start_websocket():
     token = os.getenv("UPSTOX_ACCESS_TOKEN")
     
-    # Correct way to configure the Upstox API Client
+    # Wait 10 seconds before starting to let any old connections clear
+    time.sleep(10)
+    
     configuration = upstox_client.Configuration()
+    # Corrected: Setting access_token after initialization
     configuration.access_token = token
     api_client = upstox_client.ApiClient(configuration)
     
     streamer = upstox_client.MarketDataStreamerV3(api_client)
     streamer.on("message", on_message)
     
-    # 429 Prevention: Small wait before connecting
-    time.sleep(2)
-    
     try:
         streamer.connect()
-        time.sleep(3) # Wait for handshake to finish
-        # Subscribe to multiple index keys
+        time.sleep(5) # Wait for connection handshake
         streamer.subscribe(["NSE_INDEX|Nifty 50", "NSE_INDEX|Nifty Bank", "BSE_INDEX|SENSEX"], "ltpc")
     except Exception as e:
         print(f"WS Error: {e}")
+        time.sleep(30) # Cool down on error
 
 def get_all_indices():
     if not any(t.name == "UpstoxWS" for t in threading.enumerate()):
