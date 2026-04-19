@@ -1,7 +1,6 @@
 # auth/upstox_auth.py
 
 import requests
-import streamlit as st
 from config import API_KEY, API_SECRET, REDIRECT_URI
 
 def get_login_url():
@@ -26,15 +25,16 @@ def generate_access_token(code):
 
     response = requests.post(url, headers=headers, data=data)
 
-    # 🔍 DEBUG
     print("TOKEN RESPONSE:", response.text)
 
     if response.status_code != 200:
         return None, response.text
 
-    access_token = response.json().get("access_token")
+    json_data = response.json()
+
+    access_token = json_data.get("access_token")
 
     if not access_token:
-        return None, "Token not found in response"
+        return None, "Access token missing in response"
 
     return access_token, None
