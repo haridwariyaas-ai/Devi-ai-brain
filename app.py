@@ -4,14 +4,23 @@ import streamlit as st
 from data.upstox_data import get_market_quotes
 from scanners.equity_scanner import scan_equity
 from logic.reasoning import build_reason
+from config import ACCESS_TOKEN
 
 st.set_page_config(page_title="Devi Intraday Scanner", layout="wide")
 
-st.title("🔥 Devi Intraday Stock Scanner (Real-Time NSE)")
+st.title("🔥 Devi Intraday Scanner (REAL DATA)")
+
+# 🔍 DEBUG PANEL
+st.subheader("🧪 Debug Info")
+
+if ACCESS_TOKEN:
+    st.success("✅ Access Token Loaded")
+else:
+    st.error("❌ Access Token NOT Loaded (Check Secrets)")
 
 symbols_input = st.text_input(
-    "Enter NSE Stocks (comma separated)",
-    "RELIANCE,TCS,HDFCBANK,INFY,ICICIBANK"
+    "Enter NSE Stocks",
+    "RELIANCE,TCS,HDFCBANK,INFY"
 )
 
 if st.button("Run Scanner"):
@@ -19,11 +28,12 @@ if st.button("Run Scanner"):
     try:
         symbols = [s.strip().upper() for s in symbols_input.split(",")]
 
+        st.write("📡 Fetching Data...")
+
         df = get_market_quotes(symbols)
 
-        if df.empty:
-            st.warning("No data received from Upstox")
-            st.stop()
+        st.write("📊 Raw Data:")
+        st.dataframe(df)
 
         results = scan_equity(df)
 
@@ -36,7 +46,7 @@ if st.button("Run Scanner"):
                 st.info(build_reason(stock["signals"]))
                 st.markdown("---")
         else:
-            st.warning("No strong intraday setups found")
+            st.warning("⚠️ No strong setups found")
 
     except Exception as e:
-        st.error(f"Error: {str(e)}")
+        st.error(f"🚨 ERROR: {str(e)}")
