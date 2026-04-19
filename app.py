@@ -17,24 +17,30 @@ st.title("🔥 Devi Intraday Scanner")
 st.subheader("🔐 Upstox Login")
 
 login_url = get_login_url()
-
 st.markdown(f"[👉 Click here to Login]({login_url})")
 
 query_params = st.query_params
 
-# Login ke baad code milega
+code = None
+
 if "code" in query_params:
+    if isinstance(query_params["code"], list):
+        code = query_params["code"][0]
+    else:
+        code = query_params["code"]
 
-    code = query_params["code"]
+# Token generate
+if code and "access_token" not in st.session_state:
 
-    if "access_token" not in st.session_state:
-        token, error = generate_access_token(code)
+    token, error = generate_access_token(code)
 
-        if error:
-            st.error(f"Login Failed: {error}")
-        else:
-            st.session_state["access_token"] = token
-            st.success("✅ Login Successful")
+    if error:
+        st.error(f"Login Failed: {error}")
+    else:
+        st.session_state["access_token"] = token
+        st.success("✅ Login Successful")
+
+        st.rerun()
 
 # Token check
 if "access_token" in st.session_state:
@@ -61,6 +67,7 @@ if st.button("Run Scanner"):
 
         df = get_market_quotes(symbols)
 
+        st.write("📊 Market Data")
         st.dataframe(df)
 
         results = scan_equity(df)
@@ -74,7 +81,7 @@ if st.button("Run Scanner"):
                 st.info(build_reason(stock["signals"]))
                 st.markdown("---")
         else:
-            st.warning("No strong setups found")
+            st.warning("⚠️ No strong setups found")
 
     except Exception as e:
-        st.error(f"Error: {str(e)}")
+        st.error(f"🚨 Error: {str(e)}")
