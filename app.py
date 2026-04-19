@@ -1,87 +1,45 @@
-# app.py
-
 import streamlit as st
 from auth.upstox_auth import get_login_url, generate_access_token
 from data.upstox_data import get_market_quotes
-from scanners.equity_scanner import scan_equity
-from logic.reasoning import build_reason
 
-st.set_page_config(page_title="Devi Intraday Scanner", layout="wide")
+st.title("🔥 Devi Scanner")
 
-st.title("🔥 Devi Intraday Scanner")
-
-# =========================
-# 🔐 LOGIN SECTION
-# =========================
-
-st.subheader("🔐 Upstox Login")
-
+# LOGIN
 login_url = get_login_url()
-st.markdown(f"[👉 Click here to Login]({login_url})")
+st.markdown(f"[Login to Upstox]({login_url})")
 
-query_params = st.query_params
+params = st.query_params
 
-code = None
+if "code" in params and "access_token" not in st.session_state:
 
-if "code" in query_params:
-    if isinstance(query_params["code"], list):
-        code = query_params["code"][0]
-    else:
-        code = query_params["code"]
+    code = params["code"][0] if isinstance(params["code"], list) else params["code"]
 
-# Token generate
-if code and "access_token" not in st.session_state:
+    token, err = generate_access_token(code)
 
-    token, error = generate_access_token(code)
-
-    if error:
-        st.error(f"Login Failed: {error}")
+    if err:
+        st.error(err)
     else:
         st.session_state["access_token"] = token
-        st.success("✅ Login Successful")
-
+        st.success("Login Success")
         st.rerun()
 
-# Token check
-if "access_token" in st.session_state:
-    st.success("✅ Token Active")
-else:
-    st.warning("⚠️ Please login first")
+if "access_token" not in st.session_state:
+    st.warning("Login first")
     st.stop()
 
-# =========================
-# 📊 SCANNER SECTION
-# =========================
+st.success("Token Active")
 
-st.subheader("📊 Intraday Scanner")
-
-symbols_input = st.text_input(
-    "Enter Stocks",
-    "RELIANCE,TCS,HDFCBANK,INFY"
-)
+# SCANNER
+symbols = st.text_input("Enter Stocks", "RELIANCE")
 
 if st.button("Run Scanner"):
 
     try:
-        symbols = [s.strip().upper() for s in symbols_input.split(",")]
+        sym_list = [s.strip().upper() for s in symbols.split(",")]
 
-        df = get_market_quotes(symbols)
+        df = get_market_quotes(sym_list)
 
-        st.write("📊 Market Data")
         st.dataframe(df)
 
-        results = scan_equity(df)
-
-        if results:
-            st.success(f"{len(results)} Opportunities Found 🚀")
-
-            for stock in results:
-                st.subheader(stock["symbol"])
-                st.write(f"Price: ₹{stock['ltp']}")
-                st.info(build_reason(stock["signals"]))
-                st.markdown("---")
-        else:
-            st.warning("⚠️ No strong setups found")
-
     except Exception as e:
-        st.error(f"🚨 Error: {str(e)}")
+        st.error(str(e))
