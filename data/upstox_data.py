@@ -23,8 +23,9 @@ def get_market_quotes(symbols):
         raise Exception("❌ Invalid symbols")
 
     headers = {
-        "Authorization": f"Bearer {token}"
-    }
+    "Accept": "application/json",
+    "Authorization": f"Bearer {token}"
+}
 
     params = {
         "instrument_key": ",".join(instrument_keys)
