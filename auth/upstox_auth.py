@@ -2,14 +2,10 @@
 
 import requests
 import streamlit as st
-
-API_KEY = st.secrets["UPSTOX_API_KEY"]
-API_SECRET = st.secrets["UPSTOX_API_SECRET"]
-REDIRECT_URI = st.secrets["REDIRECT_URI"]
+from config import API_KEY, API_SECRET, REDIRECT_URI
 
 def get_login_url():
     return f"https://api.upstox.com/v2/login/authorization/dialog?response_type=code&client_id={API_KEY}&redirect_uri={REDIRECT_URI}"
-
 
 def generate_access_token(code):
 
@@ -30,8 +26,15 @@ def generate_access_token(code):
 
     response = requests.post(url, headers=headers, data=data)
 
-    if response.status_code != 200:
-        st.error(response.text)
-        return None
+    # 🔍 DEBUG
+    print("TOKEN RESPONSE:", response.text)
 
-    return response.json().get("access_token")
+    if response.status_code != 200:
+        return None, response.text
+
+    access_token = response.json().get("access_token")
+
+    if not access_token:
+        return None, "Token not found in response"
+
+    return access_token, None
