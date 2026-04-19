@@ -1,5 +1,3 @@
-# auth/upstox_auth.py
-
 import requests
 from config import API_KEY, API_SECRET, REDIRECT_URI
 
@@ -10,11 +8,6 @@ def generate_access_token(code):
 
     url = "https://api.upstox.com/v2/login/authorization/token"
 
-    headers = {
-        "accept": "application/json",
-        "Content-Type": "application/x-www-form-urlencoded"
-    }
-
     data = {
         "code": code,
         "client_id": API_KEY,
@@ -23,18 +16,15 @@ def generate_access_token(code):
         "grant_type": "authorization_code"
     }
 
-    response = requests.post(url, headers=headers, data=data)
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded"
+    }
 
-    print("TOKEN RESPONSE:", response.text)
+    res = requests.post(url, headers=headers, data=data)
 
-    if response.status_code != 200:
-        return None, response.text
+    if res.status_code != 200:
+        return None, res.text
 
-    json_data = response.json()
+    token = res.json().get("access_token")
 
-    access_token = json_data.get("access_token")
-
-    if not access_token:
-        return None, "Access token missing in response"
-
-    return access_token, None
+    return token, None
