@@ -2,18 +2,21 @@
 
 import requests
 import pandas as pd
-from config import ACCESS_TOKEN
+import streamlit as st
 
 BASE_URL = "https://api.upstox.com/v2/market-quote/quotes"
 
 def get_market_quotes(symbols):
 
-    if not ACCESS_TOKEN:
-        raise Exception("❌ Access Token Missing")
+    # 🔥 SESSION se token lo (IMPORTANT FIX)
+    access_token = st.session_state.get("access_token")
+
+    if not access_token:
+        raise Exception("❌ Access Token Missing (Login again)")
 
     headers = {
         "Accept": "application/json",
-        "Authorization": f"Bearer {ACCESS_TOKEN}"
+        "Authorization": f"Bearer {access_token}"
     }
 
     instrument_keys = [f"NSE_EQ|{s}" for s in symbols]
@@ -24,23 +27,19 @@ def get_market_quotes(symbols):
 
     response = requests.get(BASE_URL, headers=headers, params=params)
 
-    # 🔍 DEBUG (VERY IMPORTANT)
     print("STATUS:", response.status_code)
     print("RESPONSE:", response.text)
 
-    # ❌ TOKEN INVALID
     if response.status_code == 401:
-        raise Exception("❌ Token Expired / Unauthorized")
+        raise Exception("❌ Token Expired")
 
-    # ❌ OTHER ERROR
     if response.status_code != 200:
         raise Exception(f"❌ API Error: {response.text}")
 
     data = response.json()
 
-    # ❌ EMPTY RESPONSE
     if "data" not in data or not data["data"]:
-        raise Exception("❌ No data from Upstox (Token expired OR wrong symbol)")
+        raise Exception("❌ No data returned from Upstox")
 
     rows = []
 
@@ -52,8 +51,5 @@ def get_market_quotes(symbols):
         })
 
     df = pd.DataFrame(rows)
-
-    if df.empty:
-        raise Exception("❌ DataFrame empty")
 
     return df
